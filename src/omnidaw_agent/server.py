@@ -38,7 +38,7 @@ TOOLS = {
     "agent_arrange_preview": ("Preview sections, duplication/transforms, automation and save", schema({"sections": {"type": "array"}, "transforms": {"type": "array"}, "automation": {"type": "array"}, "save_path": STRING}, ["sections"])),
     "agent_arrange_timeline": ("Preview batch timeline clip placements and optional markers", schema({"placements": {"type": "array", "items": {"type": "object", "properties": {"track": {"oneOf": [STRING, {"type": "integer"}]}, "slot": {"type": "integer", "minimum": 0, "maximum": 255}, "start_beat": NUMBER, "length_beats": NUMBER}, "required": ["track", "slot", "start_beat"]}}, "markers": {"type": "array", "items": {"type": "object", "properties": {"beat": NUMBER, "name": STRING, "color": STRING, "end_beat": NUMBER}, "required": ["beat", "name"]}}}, ["placements"])),
     "agent_measure": ("Measure master or track, propose mastering chain, no perceptual claims", schema({"target": STRING, "seconds": {"type": "number", "minimum": 1, "maximum": 30}, "source": {"oneOf": [STRING, {"type": "object"}]}})),
-    "agent_export_preview": ("Preview render/stems with bounded job waiting", schema({"path": STRING, "folder": STRING, "start_beat": NUMBER, "end_beat": NUMBER})),
+    "agent_export_preview": ("Preview render/stems over an explicit beat range with bounded job waiting; no guarantee of audible content", schema({"path": STRING, "folder": STRING, "start_beat": {"type": "number", "minimum": 0, "maximum": 1000000}, "end_beat": {"type": "number", "minimum": 0, "maximum": 1000000}}, ["end_beat"])),
     "agent_wait": ("Bounded job waiting with progress, no restart on timeout", schema({"job": {"type": "integer", "minimum": 1}, "deadline": {"type": "number", "exclusiveMinimum": 0, "maximum": 600}}, ["job"])),
     "agent_verify_wav": ("Read actual output PCM; check duration/rate/channels and non-silence", schema({"path": STRING, "expected_seconds": NUMBER, "sample_rate": {"type": "integer"}, "channels": {"type": "integer", "minimum": 1}}, ["path"])),
 }
@@ -78,9 +78,13 @@ async def serve(engine):
                     try:
                         await engine.refresh()
                         connection = "connected"
+                        connection_kind, host_state = "connected", "responding"
                     except OmniError as error:
                         connection = str(error)
-                    result = {"connection": connection, "catalog_provenance": engine.provenance,
+                        connection_kind, host_state = error.kind, error.host_state
+                    result = {"connection": connection, "connection_kind": connection_kind,
+                        "host_state": host_state, "endpoint_file": str(engine.client.endpoint),
+                        "catalog_provenance": engine.provenance,
                         "catalog_methods": len(engine.methods()), "capabilities": engine.client.capabilities,
                         "file_permissions": engine.file_permissions,
                         "file_permission_status": engine.file_permissions,
@@ -149,7 +153,9 @@ def main():
                 await engine.refresh()
                 print(json.dumps({"connected": True, "methods": len(engine.methods()), "capabilities": engine.client.capabilities, "file_permissions": engine.file_permissions}))
             except OmniError as error:
-                print(json.dumps({"connected": False, "error": str(error), "provenance": engine.provenance}))
+                print(json.dumps({"connected": False, "error": str(error), "error_kind": error.kind,
+                                  "host_state": error.host_state, "endpoint_file": str(engine.client.endpoint),
+                                  "provenance": engine.provenance}))
             finally:
                 await engine.client.close()
         asyncio.run(diagnose())

@@ -6,7 +6,7 @@ An unofficial, policy-enforced Model Context Protocol (MCP) server for [OMNi DAW
 
 While OMNi DAW includes an official MCP server, `omnidaw-agent-mcp` is an independent integration that adds:
 - **Strict Operator Policy**: Enforces explicit authorization (`--allow-write`, `--allow-risk`) rather than relying purely on descriptive model annotations.
-- **Workflow Previews**: Two-phase composable operations (preview -> inspect -> apply) with preflight validation, symbolic references (`$ref`), and atomic execution journals.
+- **Workflow Previews**: Two-phase composable operations (preview -> inspect -> apply) with preflight validation, symbolic references (`$ref`), and per-step execution journals. Execution is not an atomic transaction: earlier steps may have changed state when a later step fails or has an unknown outcome. There is no automatic rollback or replay; inspect live state before recovery, and do not assume undo can reverse file writes.
 - **Domain Filtering**: Selectively expose API domains at startup, reducing context overhead and constraining backend actions.
 - **Job & File Safety**: Safe async job supervision with deadlines, strict loopback TCP restrictions, automatic token redaction from errors and logs, and verification of non-silent PCM audio.
 - **Honest Offline Status**: Accurate reporting of whether API capabilities originate from live discovery or bundled references.
@@ -95,8 +95,54 @@ For agents operating remotely (e.g. on a separate VPS):
 - `agent_arrange_preview`: Arrange scenes into sections, duplicate clips with transforms, and apply automation.
 - `agent_arrange_timeline`: Place a batch of clips (`track`, `slot`, `start_beat`, `length_beats`) and optional markers in one preview plan.
 - `agent_measure`: Measure master/track loudness, tonal balance, and clipping, proposing mastering chains without perceptual claims.
-- `agent_export_preview`: Export full mixes or stems to WAV files with bounded job tracking.
+- `agent_export_preview`: Preview mixes or stems to WAV files with bounded job tracking. An explicit finite `end_beat` greater than `start_beat` (default 0) is required; the workflow never guesses song length. Failed or unavailable arrangement inspection produces no plan. Session-mode preparation selects the arrangement using `arrangement.play` (which starts playback) then stops it; this does not place session clips on the timeline or guarantee non-silent output. Inspect the range/content and verify the written audio separately.
 - `agent_verify_wav`: Verify that exported audio contains valid, non-silent integer PCM with matching sample rate and duration.
+
+## Known Limitations
+
+### Real-Time Audio Capture Stability
+
+**Issue**: Repeated `analysis.capture` operations (used for real-time audio monitoring and LLM-based evaluation) trigger a fatal `POLLERR` cascade in OMNi's CPAL audio backend after ~75 seconds of accumulated capture workload, causing process termination.
+
+**Root cause**: Internal resource leak or stream management bug in OMNi's audio backend under sustained real-time capture operations. This is reproducible, independent of system load/battery state, and isolated to capture operations — sustained playback without capture is stable indefinitely.
+
+**Affected workflows**:
+- Multi-round audio critic loops (compose → capture → LLM eval → adjust → repeat)
+- Real-time monitoring with periodic capture for level/spectrum analysis
+
+**Unaffected workflows**:
+- Compose + single export (stable)
+- Offline rendering via `render.export` (stable, no real-time pressure)
+- Short capture workloads (<30s total accumulated capture time)
+- Playback-only operations (stable)
+
+**Mitigations**:
+
+1. **Use `engine.capture_with_cooldown()`** instead of raw `analysis.capture`:
+   ```python
+   # Automatic 5s cooldown between captures, max 8 consecutive captures
+   result = await engine.capture_with_cooldown(source="master", seconds=2)
+   ```
+
+2. **Export and analyze offline** (recommended for multi-round evaluation):
+   ```python
+   # Instead of real-time capture loop:
+   await engine.call("export.render", {"path": "/tmp/preview.wav", "start_beat": 0, "end_beat": 16})
+   # Analyze WAV offline with audio_evaluator
+   ```
+
+3. **Batch with transport cycles**: For >8 captures, stop transport, pause 15s, restart, reset counter:
+   ```python
+   for round in range(3):
+       for i in range(8):
+           await engine.capture_with_cooldown()
+       await engine.call("transport.stop")
+       await asyncio.sleep(15)
+       await engine.call("arrangement.play", {"from_beat": 0})
+       engine._capture_count = 0
+   ```
+
+**Evidence**: See `/home/cancio/.hermes/cache/scratch/omni-stability-analysis.md` for full discriminant experiment matrix and reproduction details.
 
 ## Verification & Testing
 

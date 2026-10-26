@@ -1,6 +1,12 @@
-"""Fake OMNi over real loopback TCP; actual official SDK stdio subprocess tests."""
+"""Fake OMNi over real loopback TCP; actual official SDK stdio subprocess tests.
+
+Everything here talks to an in-process FAKE host. Passing these tests does not
+establish behavior against a real OMNi host (see scripts/run_integration.py).
+"""
 import asyncio
 import json
+import socket
+import subprocess
 import sys
 
 import pytest
@@ -29,6 +35,16 @@ async def host(tmp_path):
                 req = json.loads(line)
                 name = req["method"]
                 calls.append(name)
+                if (name == "api.hello" and state.get("hello_error")) or (
+                        name == "arrangement.get" and state.get("arrangement_error")):
+                    code = -32001 if name == "api.hello" else -32003
+                    error = {"code": code, "message": "rejected secret-token"}
+                    writer.write(json.dumps({"jsonrpc": "2.0", "id": req["id"], "error": error}).encode()+b'\n')
+                    await writer.drain()
+                    continue
+                if name == "api.hello" and state.get("hello_silent"):
+                    await asyncio.sleep(.3)
+                    break
                 if name == "api.hello":
                     result = {"protocol": "omnidaw-api", "api_version": state.get("version", "0.21.0"), "capabilities": state.get("capabilities", ["jobs"])}
                 elif name == "api.methods":
@@ -380,3 +396,299 @@ async def test_subprocess_improvements(host, tmp_path):
         assert not res.is_error
         timeline_plan = json.loads(res.content[0].text)
         assert len(timeline_plan["changes"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Hardening increment: discovery/connection diagnostics, explicit export range,
+# fail-closed arrangement inspection. Fake host unless stated otherwise.
+# ---------------------------------------------------------------------------
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def good_endpoint(port=1234, **overrides):
+    ep = {"protocol": "omnidaw-api", "host": "127.0.0.1", "port": port, "token": "secret-token"}
+    ep.update(overrides)
+    return ep
+
+
+async def connect_error(path, timeout=1):
+    client = Client(path, timeout=timeout)
+    with pytest.raises(OmniError) as error:
+        await client.connect()
+    assert client.writer is None
+    return error.value
+
+
+async def test_diag_discovery_missing_is_not_host_absent(tmp_path):
+    err = await connect_error(tmp_path / "nope" / "endpoint.json")
+    assert err.kind == "discovery_missing"
+    assert err.host_state == "unknown"
+    text = str(err).lower()
+    assert "not found" in text or "absent" in text
+    assert "does not prove" in text
+
+
+@pytest.mark.parametrize("content,reason", [
+    ("{not json", "json"),
+    ("[1, 2]", "object"),
+    (json.dumps({"protocol": "omnidaw-api", "host": "127.0.0.1", "port": 1}), "token"),
+    (json.dumps(good_endpoint(host="192.0.2.1")), "loopback"),
+    (json.dumps(good_endpoint(host="not-an-ip")), "host"),
+    (json.dumps(good_endpoint(port=0)), "port"),
+    (json.dumps(good_endpoint(port="1234")), "port"),
+    (json.dumps(good_endpoint(token="")), "token"),
+    (json.dumps(good_endpoint(protocol="other")), "protocol"),
+    pytest.param("x" * 20000, "large", id="oversized"),
+])
+async def test_diag_discovery_invalid_variants(tmp_path, content, reason):
+    path = tmp_path / "endpoint.json"
+    path.write_text(content)
+    err = await connect_error(path)
+    assert err.kind == "discovery_invalid"
+    assert reason in str(err).lower()
+    assert "secret-token" not in str(err)
+    assert err.host_state == "unknown"
+
+
+async def test_diag_discovery_unreadable(tmp_path):
+    path = tmp_path / "endpoint.json"
+    path.mkdir()  # exists but cannot be read as a file
+    err = await connect_error(path)
+    assert err.kind == "discovery_unreadable"
+
+
+async def test_diag_connection_refused(tmp_path):
+    path = tmp_path / "endpoint.json"
+    path.write_text(json.dumps(good_endpoint(port=free_port())))
+    err = await connect_error(path)
+    assert err.kind == "connection_refused"
+    assert err.host_state == "not_listening"
+    assert "secret-token" not in str(err)
+
+
+async def test_diag_connection_timeout_mocked(tmp_path, monkeypatch):
+    path = tmp_path / "endpoint.json"
+    path.write_text(json.dumps(good_endpoint()))
+
+    async def hang(*args, **kwargs):
+        await asyncio.sleep(5)
+    monkeypatch.setattr(asyncio, "open_connection", hang)
+    err = await connect_error(path, timeout=.05)
+    assert err.kind == "connection_timeout"
+
+
+async def test_diag_handshake_timeout(host):
+    path, calls, state = host
+    state["hello_silent"] = True
+    err = await connect_error(path, timeout=.05)
+    assert err.kind == "handshake_timeout"
+    assert err.host_state == "listening"
+    assert "secret-token" not in str(err)
+
+
+async def test_diag_handshake_rejected_redacts_token(host):
+    path, calls, state = host
+    state["hello_error"] = True
+    err = await connect_error(path)
+    assert err.kind == "handshake_rejected"
+    assert err.host_state == "listening"
+    assert "secret-token" not in str(err)
+    assert "-32001" in str(err)
+
+
+async def test_diag_incompatible_kind(host):
+    path, _, state = host
+    state["version"] = "1.0.0"
+    err = await connect_error(path)
+    assert err.kind == "incompatible"
+
+
+async def test_diag_loopback_failure_makes_no_calls(host):
+    path, calls, _ = host
+    ep = json.loads(path.read_text())
+    ep["host"] = "192.0.2.1"
+    path.write_text(json.dumps(ep))
+    err = await connect_error(path)
+    assert err.kind == "discovery_invalid"
+    assert not calls
+
+
+async def test_diag_status_and_cli_report_classification(tmp_path):
+    missing = tmp_path / "absent" / "endpoint.json"
+    params = StdioServerParameters(command=sys.executable,
+                                   args=["-m", "omnidaw_agent.server", "--endpoint", str(missing)])
+    async with MCPClient(params) as client:
+        status = json.loads((await client.call_tool("agent_status", {})).content[0].text)
+        assert status["connection_kind"] == "discovery_missing"
+        assert status["host_state"] == "unknown"
+        assert "NOT verified" in status["catalog_provenance"]
+    out = subprocess.run([sys.executable, "-m", "omnidaw_agent.server", "--endpoint", str(missing), "--diagnose"],
+                         capture_output=True, text=True, timeout=30, check=True)
+    report = json.loads(out.stdout)
+    assert report["connected"] is False
+    assert report["error_kind"] == "discovery_missing"
+    assert report["host_state"] == "unknown"
+    assert report["endpoint_file"] == str(missing)
+    assert "NOT verified" in report["provenance"]
+
+
+async def test_diag_cli_connected_report(host):
+    path, _, _ = host
+    proc = await asyncio.create_subprocess_exec(
+        sys.executable, "-m", "omnidaw_agent.server", "--endpoint", str(path), "--diagnose",
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), 30)
+    assert proc.returncode == 0, stderr.decode()
+    report = json.loads(stdout)
+    assert report["connected"] is True
+    assert b"secret-token" not in stdout
+
+
+EXPORT_METHODS = [("transport.stop", "control"), ("transport.seek", "control"), ("arrangement.play", "control"),
+                  ("arrangement.get", "read"), ("export.render", "control"), ("export.stems", "control")]
+
+
+@pytest.fixture
+async def export_engine(host, tmp_path):
+    path, calls, state = host
+    state["methods"].extend(method(n, e) for n, e in EXPORT_METHODS)
+    state["capabilities"] = ["jobs", "render"]
+    out_dir = tmp_path / "export_out"
+    out_dir.mkdir()
+    stems = out_dir / "stems"
+    stems.mkdir()
+    client = Client(path)
+    engine = Engine(client, allow_write=True, output_root=out_dir)
+    yield engine, calls, state, out_dir, stems
+    await client.close()
+
+
+@pytest.mark.parametrize("kind", ["mix", "stems"])
+@pytest.mark.parametrize("start,end", [
+    (0, None), (0, float("nan")), (0, float("inf")), (0, float("-inf")),
+    (0, 0), (8, 8), (16, 4), (0, -1), (0, True), (0, "16"),
+    (float("nan"), 16), (-1, 16), (True, 16),
+])
+async def test_export_preview_refuses_bad_range_before_any_host_call(export_engine, kind, start, end):
+    engine, calls, _, out_dir, stems = export_engine
+    kwargs = {"path": str(out_dir / "mix.wav")} if kind == "mix" else {"folder": str(stems)}
+    with pytest.raises(OmniError, match="end_beat|start_beat"):
+        if end is None:
+            await export_preview(engine, start_beat=start, **kwargs)
+        else:
+            await export_preview(engine, start_beat=start, end_beat=end, **kwargs)
+    assert calls == []
+    assert engine.plans == {}
+
+
+@pytest.mark.parametrize("kind", ["mix", "stems"])
+async def test_export_preview_has_no_implicit_end_beat(export_engine, kind):
+    engine, calls, _, out_dir, stems = export_engine
+    kwargs = {"path": str(out_dir / "mix.wav")} if kind == "mix" else {"folder": str(stems)}
+    with pytest.raises(OmniError, match="end_beat"):
+        await export_preview(engine, **kwargs)
+    assert engine.plans == {}
+
+
+@pytest.mark.parametrize("kind", ["mix", "stems"])
+async def test_export_preview_explicit_range_forwarded_verbatim(export_engine, kind):
+    engine, _, state, out_dir, stems = export_engine
+    state["arrangement_get"] = {"playback": "arrangement"}
+    kwargs = {"path": str(out_dir / "mix.wav")} if kind == "mix" else {"folder": str(stems)}
+    preview = await export_preview(engine, start_beat=4, end_beat=512.5, **kwargs)
+    last = preview["changes"][-1]
+    assert last["method"] == ("export.render" if kind == "mix" else "export.stems")
+    assert last["params"]["start_beat"] == 4 and last["params"]["end_beat"] == 512.5
+
+
+def test_export_preview_public_schema_requires_end_beat():
+    from omnidaw_agent.server import TOOLS
+    spec = TOOLS["agent_export_preview"][1]
+    assert "end_beat" in spec["required"]
+    for key in ("start_beat", "end_beat"):
+        assert spec["properties"][key]["minimum"] == 0
+        assert spec["properties"][key]["maximum"] == 1000000
+
+
+async def test_export_sdk_rejects_missing_end_beat(host, tmp_path):
+    path, calls, state = host
+    state["methods"].extend(method(n, e) for n, e in EXPORT_METHODS)
+    state["capabilities"] = ["jobs", "render"]
+    out = tmp_path / "o"
+    out.mkdir()
+    params = StdioServerParameters(command=sys.executable, args=[
+        "-m", "omnidaw_agent.server", "--endpoint", str(path), "--allow-write", "--output-root", str(out)])
+    async with MCPClient(params) as client:
+        res = await client.call_tool("agent_export_preview", {"path": str(out / "m.wav")})
+        assert res.is_error
+        assert not any(c.startswith("transport.") or c.startswith("export.") for c in calls)
+
+
+@pytest.mark.parametrize("failure", ["rpc_error", "drop", "timeout", "malformed"])
+@pytest.mark.parametrize("kind", ["mix", "stems"])
+async def test_export_preview_fails_closed_when_arrangement_inspection_fails(export_engine, kind, failure):
+    engine, calls, state, out_dir, stems = export_engine
+    engine.client.timeout = .05
+    await engine.refresh()
+    if failure == "rpc_error":
+        state["arrangement_error"] = True
+    else:
+        state["mode"] = failure
+    kwargs = {"path": str(out_dir / "mix.wav")} if kind == "mix" else {"folder": str(stems)}
+    with pytest.raises(OmniError, match="arrangement"):
+        await export_preview(engine, start_beat=0, end_beat=16, **kwargs)
+    assert engine.plans == {}
+    assert not any(c.startswith("transport.") or c.startswith("export.") or c == "arrangement.play" for c in calls)
+
+
+async def test_export_preview_session_mode_still_prepares_arrangement_steps(export_engine):
+    engine, _, state, out_dir, _ = export_engine
+    state["arrangement_get"] = {"playback": "session"}
+    preview = await export_preview(engine, path=str(out_dir / "mix.wav"), start_beat=0, end_beat=16)
+    assert [s["method"] for s in preview["changes"]] == [
+        "transport.stop", "transport.seek", "arrangement.play", "transport.stop", "export.render"]
+
+
+@pytest.mark.parametrize("value", [None, [], {}, {"playback": "unknown"}])
+async def test_export_unknown_playback_fails_closed(export_engine, value):
+    engine, _, state, out_dir, _ = export_engine
+    state["arrangement_get"] = value
+    with pytest.raises(OmniError, match="unknown playback"):
+        await export_preview(engine, path=str(out_dir / "mix.wav"), end_beat=32)
+    assert not engine.plans
+
+
+async def test_export_unavailable_inspection_fails_closed(export_engine):
+    engine, _, state, out_dir, _ = export_engine
+    state["methods"] = [m for m in state["methods"] if m["name"] != "arrangement.get"]
+    with pytest.raises(OmniError, match="unavailable"):
+        await export_preview(engine, path=str(out_dir / "mix.wav"), end_beat=32)
+    assert not engine.plans
+
+
+async def test_status_provenance_not_live_after_disconnection(host):
+    path, _, _ = host
+    client = Client(path)
+    engine = Engine(client)
+    await engine.refresh()
+    assert engine.provenance.startswith("live")
+    await client.close()
+    missing = path.parent / "missing.json"
+    client.endpoint = missing
+    with pytest.raises(OmniError):
+        await engine.refresh()
+    assert "cached" in engine.provenance and "NOT verified" in engine.provenance
+    assert client.capabilities == []
+
+
+async def test_diag_invalid_handshake_catalog(host):
+    path, _, state = host
+    state["methods"] = [method("session.info"), method("session.info")]
+    error = await connect_error(path)
+    assert error.kind == "handshake_invalid"
+    assert "api.methods" in str(error)
+    assert "secret-token" not in str(error)

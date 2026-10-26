@@ -54,7 +54,12 @@ class Engine:
         return risky(method, params)
 
     async def refresh(self):
-        await self.client.connect()
+        try:
+            await self.client.connect()
+        except OmniError:
+            if self.provenance.startswith("live api.methods"):
+                self.provenance = "cached api.methods; NOT verified against currently reachable host"
+            raise
         self.catalog = self.client.catalog
         self.provenance = f"live api.methods; connection generation {self.client.generation}"
 
@@ -125,6 +130,46 @@ class Engine:
                 raise OmniError("Job failed: " + json.dumps(self.client.sanitize(state.get("error"))))
             await asyncio.sleep(min(.1, max(0, end-time.monotonic())))
         raise OmniError(f"Job {job} deadline reached; job may still run. Inspect jobs.get; do not restart it.")
+
+    async def capture_with_cooldown(self, source="master", seconds=2, cooldown=5, batch_limit=8):
+        """Capture audio with automatic cooldown to prevent OMNi backend saturation.
+        
+        Known issue: Repeated analysis.capture operations trigger a POLLERR cascade
+        in OMNi's CPAL backend after ~75s of accumulated capture workload, causing
+        process termination. This helper mitigates the issue by:
+        - Inserting cooldown pauses between captures to allow backend cleanup
+        - Enforcing a batch limit before requiring transport stop/restart
+        
+        Args:
+            source: Audio source (default "master")
+            seconds: Capture duration per call (default 2s)
+            cooldown: Pause after each capture in seconds (default 5s)
+            batch_limit: Max consecutive captures before transport cycle (default 8)
+        
+        Returns:
+            dict with 'job', 'state', 'result' (audio analysis data)
+        
+        Raises:
+            OmniError: If batch_limit would be exceeded. Caller must stop transport,
+                      pause 10-15s, then restart playback before continuing.
+        """
+        if not hasattr(self, '_capture_count'):
+            self._capture_count = 0
+        
+        if self._capture_count >= batch_limit:
+            raise OmniError(
+                f"Capture batch limit ({batch_limit}) reached. Stop transport, wait 15s, "
+                "restart playback, then reset with engine._capture_count = 0 before next capture."
+            )
+        
+        job_result = await self.call("analysis.capture", {"source": source, "seconds": seconds})
+        result = await self.wait(job_result["job"])
+        self._capture_count += 1
+        
+        if self._capture_count < batch_limit and cooldown > 0:
+            await asyncio.sleep(cooldown)
+        
+        return result
 
     async def inspect(self, limit=16):
         result = {"catalog_provenance": self.provenance, "capabilities": self.client.capabilities,

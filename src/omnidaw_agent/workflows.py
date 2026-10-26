@@ -1,5 +1,7 @@
 """Small workflow builders using official methods, UUID references and native generators."""
 
+import math
+
 from .client import OmniError
 
 
@@ -83,7 +85,15 @@ async def measure(engine, target="spotify", seconds=15, source="master"):
     return result
 
 
-async def export_preview(engine, path=None, folder=None, start_beat=0, end_beat=16):
+async def export_preview(engine, path=None, folder=None, start_beat=0, end_beat=None):
+    # Validate direct Python callers too, before inspection or plan creation. Never
+    # guess song length from unknown live fields or silently default to four bars.
+    for name, value in (("start_beat", start_beat), ("end_beat", end_beat)):
+        if (type(value) not in (int, float) or not 0 <= value <= 1000000
+                or not math.isfinite(value)):
+            raise OmniError(f"Explicit finite {name} in 0..1000000 is required")
+    if end_beat <= start_beat:
+        raise OmniError("end_beat must be greater than start_beat")
     await engine.refresh()
     if not {"render", "jobs"}.issubset(engine.client.capabilities):
         raise OmniError("Unsupported: host lacks render/jobs capabilities")
@@ -94,16 +104,19 @@ async def export_preview(engine, path=None, folder=None, start_beat=0, end_beat=
     engine.check_files("export.render" if path else "export.stems", params)
 
     steps = []
-    # Both single-file mixdown and multi-track stems render the timeline: ensure
-    # OMNi is actually following the arrangement to prevent silent exports.
-    is_arrangement = False
-    if "arrangement.get" in engine.methods():
-        try:
-            arr = await engine.call("arrangement.get")
-            if isinstance(arr, dict):
-                is_arrangement = arr.get("playback") == "arrangement"
-        except Exception:
-            is_arrangement = False
+    # Preserve the existing timeline preparation sequence. arrangement.play also
+    # starts playback; stop afterwards. This cannot guarantee audible content:
+    # session clips must be placed on the timeline and output verified separately.
+    if "arrangement.get" not in engine.methods():
+        raise OmniError("Cannot inspect arrangement: arrangement.get is unavailable or domain-filtered")
+    try:
+        arr = await engine.call("arrangement.get")
+    except OmniError as error:
+        raise OmniError(f"Cannot inspect arrangement; no export plan created: {error}",
+                        kind=error.kind, host_state=error.host_state) from None
+    if not isinstance(arr, dict) or arr.get("playback") not in {"arrangement", "session"}:
+        raise OmniError("Cannot inspect arrangement: unknown playback state; no export plan created")
+    is_arrangement = arr["playback"] == "arrangement"
 
     if not is_arrangement:
         steps.extend([
