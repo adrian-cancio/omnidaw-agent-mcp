@@ -110,7 +110,7 @@ class Client:
             self.reader, self.writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port, limit=LIMIT), self.timeout)
             hello = await self._rpc("api.hello", {"token": token, "api_version": VERSION,
-                                    "client": {"name": "omnidaw-agent-mcp", "version": "0.1.0"}})
+                                    "client": {"name": "omnidaw-agent-mcp", "version": "0.2.0"}})
             if hello.get("protocol") != "omnidaw-api" or not compatible(hello.get("api_version")):
                 raise OmniError("Incompatible OMNi protocol/version (requires >=0.21.0, major 0)")
             doc = await self._rpc("api.methods", {})
