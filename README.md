@@ -100,49 +100,24 @@ For agents operating remotely (e.g. on a separate VPS):
 
 ## Known Limitations
 
-### Real-Time Audio Capture Stability
+### OMNi audio-stream failure on Linux (upstream issue, not fixed here)
 
-**Issue**: Repeated `analysis.capture` operations (used for real-time audio monitoring and LLM-based evaluation) trigger a fatal `POLLERR` cascade in OMNi's CPAL audio backend after ~75 seconds of accumulated capture workload, causing process termination.
+**Observed behaviour**: during playback, OMNi's audio output stream can die. The OMNi log then shows `alsa::poll() returned POLLERR` hundreds of thousands of times, followed by `Audio stream died - auto-restarting engine`. After that, audio output stays silent, including fast offline renders: they produce a structurally valid WAV whose content is silent. In some real sessions the host process then disappeared.
 
-**Root cause**: Internal resource leak or stream management bug in OMNi's audio backend under sustained real-time capture operations. This is reproducible, independent of system load/battery state, and isolated to capture operations — sustained playback without capture is stable indefinitely.
+**What the evidence supports**:
+- It reproduced in isolated runs against a null audio sink (no headset, no sound card). Hardware is therefore not required to trigger it.
+- It happens during plain arrangement playback. `analysis.capture` is not required to trigger it. An earlier version of this README claimed a threshold of about 75 s of accumulated captures; later controlled runs contradicted that.
+- Time to failure varied (23 s to 106 s in failing runs), and some runs of 90-224 s were clean. There is no deterministic trigger.
 
-**Affected workflows**:
-- Multi-round audio critic loops (compose → capture → LLM eval → adjust → repeat)
-- Real-time monitoring with periodic capture for level/spectrum analysis
+**What is not established**:
+- The cause. The OMNi binary embeds two copies of CPAL's ALSA backend (one identified as 0.15.3, one vendored and apparently from the 0.17 era). Which one drives the failing stream is unconfirmed. An upstream CPAL change (commit `5931fa29`, first released in v0.18.0) fixes a `POLLERR` spin loop that matches the symptoms, but its effect on OMNi has not been tested because it requires a rebuilt host.
+- How the host process dies in real sessions. The sandboxed runs showed the stream dying and the engine restarting, not the process exiting.
+- Behaviour on other operating systems.
 
-**Unaffected workflows**:
-- Compose + single export (stable)
-- Offline rendering via `render.export` (stable, no real-time pressure)
-- Short capture workloads (<30s total accumulated capture time)
-- Playback-only operations (stable)
-
-**Mitigations**:
-
-1. **Use `engine.capture_with_cooldown()`** instead of raw `analysis.capture`:
-   ```python
-   # Automatic 5s cooldown between captures, max 8 consecutive captures
-   result = await engine.capture_with_cooldown(source="master", seconds=2)
-   ```
-
-2. **Export and analyze offline** (recommended for multi-round evaluation):
-   ```python
-   # Instead of real-time capture loop:
-   await engine.call("export.render", {"path": "/tmp/preview.wav", "start_beat": 0, "end_beat": 16})
-   # Analyze WAV offline with audio_evaluator
-   ```
-
-3. **Batch with transport cycles**: For >8 captures, stop transport, pause 15s, restart, reset counter:
-   ```python
-   for round in range(3):
-       for i in range(8):
-           await engine.capture_with_cooldown()
-       await engine.call("transport.stop")
-       await asyncio.sleep(15)
-       await engine.call("arrangement.play", {"from_beat": 0})
-       engine._capture_count = 0
-   ```
-
-**Evidence**: Documented in test run logs and stability analysis reports included with bug report submissions.
+**Practical guidance for MCP clients** (none of this prevents the failure):
+1. Always verify exported audio with `agent_verify_wav` or equivalent. After a stream death, an offline render can be silent.
+2. Save the project often. If the host dies, do not restart it automatically; report the failure and the evidence.
+3. Prefer offline export over real-time capture for evaluation. `engine.capture_with_cooldown()` (5 s pause between captures, batch limit of 8) is kept, but it was designed on a hypothesis that later evidence weakened, and its effect is not demonstrated.
 
 ## Verification & Testing
 
