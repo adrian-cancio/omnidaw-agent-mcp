@@ -49,6 +49,9 @@ omnidaw-agent
 # Allow project edits within authorized root
 omnidaw-agent --allow-write --allow-risk --output-root /home/user/Music/projects
 
+# Also let session.save / export.render replace existing files (only inside --output-root)
+omnidaw-agent --allow-write --allow-overwrite --output-root /home/user/Music/projects
+
 # Restrict exposed tools to specific domains
 omnidaw-agent --domains session,tracks,clips,theory
 ```
@@ -90,6 +93,7 @@ For agents operating remotely (e.g. on a separate VPS):
 - `agent_apply`: Execute an approved preview plan once, producing an execution journal and handling partial failures.
 - `agent_loop_preview`: Compose a deterministic four-part electronic loop (drums, bass, chords, melody) using live instruments and native theory generators.
 - `agent_arrange_preview`: Arrange scenes into sections, duplicate clips with transforms, and apply automation.
+- `agent_arrange_timeline`: Place a batch of clips (`track`, `slot`, `start_beat`, `length_beats`) and optional markers in one preview plan.
 - `agent_measure`: Measure master/track loudness, tonal balance, and clipping, proposing mastering chains without perceptual claims.
 - `agent_export_preview`: Export full mixes or stems to WAV files with bounded job tracking.
 - `agent_verify_wav`: Verify that exported audio contains valid, non-silent integer PCM with matching sample rate and duration.

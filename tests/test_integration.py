@@ -9,6 +9,7 @@ from mcp.client.stdio import StdioServerParameters
 
 from omnidaw_agent.client import Client, OmniError, compatible
 from omnidaw_agent.engine import Engine
+from omnidaw_agent.workflows import arrange_timeline, export_preview
 
 
 def method(name, effect="read"):
@@ -29,7 +30,7 @@ async def host(tmp_path):
                 name = req["method"]
                 calls.append(name)
                 if name == "api.hello":
-                    result = {"protocol": "omnidaw-api", "api_version": state.get("version", "0.21.0"), "capabilities": ["jobs"]}
+                    result = {"protocol": "omnidaw-api", "api_version": state.get("version", "0.21.0"), "capabilities": state.get("capabilities", ["jobs"])}
                 elif name == "api.methods":
                     result = {"protocol": "omnidaw-api", "api_version": "0.21.0", "methods": state["methods"]}
                 elif state["mode"] == "drop":
@@ -43,6 +44,8 @@ async def host(tmp_path):
                     continue
                 elif name == "jobs.wait":
                     result = {"state": state.get("job", "done"), "progress": .5, "result": {"ok": True}, "error": "failed"}
+                elif name == "arrangement.get":
+                    result = state.get("arrangement_get", {"playback": "session"})
                 else:
                     result = {"ok": True, "id": "uuid-1"}
                 reply = {"jsonrpc": "2.0", "id": req["id"] + (1 if state["mode"] == "wrong_id" and name != "api.hello" else 0), "result": result}
@@ -161,7 +164,219 @@ async def test_actual_sdk_subprocess(host):
 async def test_offline_sdk(tmp_path):
     params = StdioServerParameters(command=sys.executable, args=["-m", "omnidaw_agent.server", "--endpoint", str(tmp_path/"absent")])
     async with MCPClient(params) as client:
-        # 102 native tools from real bundled catalog + 10 agent_* composite workflows = 112 tools
-        assert len((await client.list_tools()).tools) == 112
+        # 102 native tools from real bundled catalog + 11 agent_* composite workflows = 113 tools
+        assert len((await client.list_tools()).tools) == 113
         result = await client.call_tool("agent_status", {})
         assert "NOT verified" in result.content[0].text
+
+
+async def test_allow_overwrite_policy(host, tmp_path):
+    path, calls, state = host
+    state["methods"].extend([
+        method("session.save", "control"),
+        method("export.render", "control"),
+        method("export.stems", "control"),
+    ])
+    output_root = tmp_path / "out"
+    output_root.mkdir()
+    target_omni = output_root / "song.omni"
+    target_omni.write_text("existing omni")
+
+    client = Client(path)
+    try:
+        # Default policy: an existing target is refused, and so is overwrite: true
+        # (allow_risk is granted so the file policy, not the risk gate, is under test).
+        engine_no_ow = Engine(client, allow_write=True, allow_risk=True, output_root=output_root)
+        with pytest.raises(OmniError, match="never overwritten"):
+            await engine_no_ow.call("session.save", {"path": str(target_omni)})
+        with pytest.raises(OmniError, match="never overwritten"):
+            await engine_no_ow.call("session.save", {"path": str(target_omni), "overwrite": True})
+        # Without allow_risk, overwrite: true is also gated as a risky replacement
+        engine_no_risk = Engine(client, allow_write=True, output_root=output_root)
+        with pytest.raises(OmniError, match="allow-risk"):
+            await engine_no_risk.call("session.save", {"path": str(target_omni), "overwrite": True})
+
+        # --allow-overwrite: overwrite: true is accepted without --allow-risk
+        engine_ow = Engine(client, allow_write=True, output_root=output_root, allow_overwrite=True)
+        res = await engine_ow.call("session.save", {"path": str(target_omni), "overwrite": True})
+        assert res.get("ok") is True
+
+        target_wav = output_root / "render.wav"
+        target_wav.write_text("existing wav")
+        res_wav = await engine_ow.call("export.render", {"path": str(target_wav), "overwrite": True})
+        assert res_wav.get("ok") is True
+
+        # Existing file without overwrite: true is still refused
+        with pytest.raises(OmniError, match="never overwritten"):
+            await engine_ow.call("export.render", {"path": str(target_wav)})
+
+        # A directory target is never overwritable
+        with pytest.raises(OmniError, match="never overwritten"):
+            await engine_ow.call("session.save", {"path": str(output_root), "overwrite": True})
+
+        # Targets outside output_root are denied even with allow_overwrite
+        escape_file = tmp_path / "escape.omni"
+        escape_file.write_text("escape")
+        with pytest.raises(OmniError, match="escapes"):
+            await engine_ow.call("session.save", {"path": str(escape_file), "overwrite": True})
+
+        # Stems folders are not covered by the flag
+        stems_folder = output_root / "stems"
+        stems_folder.mkdir()
+        engine_stems = Engine(client, allow_write=True, allow_risk=True, output_root=output_root, allow_overwrite=True)
+        with pytest.raises(OmniError, match="not supported"):
+            await engine_stems.call("export.stems", {"folder": str(stems_folder), "overwrite": True})
+    finally:
+        await client.close()
+
+
+async def test_file_capability_status_and_diagnostics(host):
+    path, calls, state = host
+    state["methods"].extend([
+        method("audio.import", "edit"),
+        method("audio.transcribe", "read"),
+        method("audio.split_stems", "control"),
+    ])
+    # Host capabilities default to ["jobs"], missing "files"
+    client = Client(path)
+    engine = Engine(client, allow_write=True, allow_risk=True)
+    await engine.refresh()
+    assert engine.file_permissions == "disabled"
+
+    # Calling audio.import reports exact instructions
+    with pytest.raises(OmniError) as err_import:
+        await engine.call("audio.import", {"track": 0, "slot": 0, "path": "/test.wav"})
+    assert 'Let clients read audio files' in str(err_import.value)
+    assert 'OMNI_API_FILES=1' in str(err_import.value)
+
+    # Calling audio.transcribe reports exact instructions
+    with pytest.raises(OmniError) as err_transcribe:
+        await engine.call("audio.transcribe", {"track": 0, "slot": 0, "path": "/test.wav"})
+    assert 'Let clients read audio files' in str(err_transcribe.value)
+    assert 'OMNI_API_FILES=1' in str(err_transcribe.value)
+
+    # Calling audio.split_stems reports exact instructions
+    with pytest.raises(OmniError) as err_stems:
+        await engine.call("audio.split_stems", {"folder": "/tmp/stems", "path": "/test.wav"})
+    assert 'Let clients read audio files' in str(err_stems.value)
+    assert 'OMNI_API_FILES=1' in str(err_stems.value)
+
+    # Grant "files" capability
+    state["capabilities"] = ["jobs", "files"]
+    await client.close()
+    client2 = Client(path)
+    engine2 = Engine(client2, allow_write=True, allow_risk=True)
+    await engine2.refresh()
+    assert engine2.file_permissions == "enabled"
+    # audio.transcribe now succeeds without capability error
+    res = await engine2.call("audio.transcribe", {"track": 0, "slot": 0, "path": "/test.wav"})
+    assert res.get("ok") is True
+
+    await client2.close()
+
+
+async def test_export_preview_silence_prevention(host, tmp_path):
+    path, calls, state = host
+    state["methods"].extend([
+        method("transport.stop", "control"),
+        method("transport.seek", "control"),
+        method("arrangement.play", "control"),
+        method("arrangement.get", "read"),
+        method("export.render", "control"),
+    ])
+    state["capabilities"] = ["jobs", "render"]
+    out_dir = tmp_path / "export_out"
+    out_dir.mkdir()
+    wav_target = out_dir / "render.wav"
+
+    client = Client(path)
+    engine = Engine(client, allow_write=True, output_root=out_dir)
+
+    # 1. When host is not in arrangement mode (e.g. session mode)
+    state["arrangement_get"] = {"playback": "session"}
+    preview_session = await export_preview(engine, path=str(wav_target), start_beat=0, end_beat=16)
+    step_methods = [s["method"] for s in preview_session["changes"]]
+    assert step_methods == [
+        "transport.stop",
+        "transport.seek",
+        "arrangement.play",
+        "transport.stop",
+        "export.render",
+    ]
+    assert preview_session["changes"][1]["params"] == {"beat": 0}
+    assert preview_session["changes"][2]["params"] == {"from_beat": 0}
+
+    # 2. When host is already in arrangement mode
+    state["arrangement_get"] = {"playback": "arrangement"}
+    preview_arr = await export_preview(engine, path=str(wav_target), start_beat=0, end_beat=16)
+    step_methods_arr = [s["method"] for s in preview_arr["changes"]]
+    assert step_methods_arr == ["export.render"]
+
+    await client.close()
+
+
+async def test_arrange_timeline_workflow(host):
+    path, calls, state = host
+    state["methods"].extend([
+        method("arrangement.place_clip", "edit"),
+        method("markers.add", "edit"),
+    ])
+    client = Client(path)
+    engine = Engine(client, allow_write=True)
+
+    placements = [
+        {"track": 0, "slot": 0, "start_beat": 0, "length_beats": 16},
+        {"track": "uuid-drums", "slot": 1, "start_beat": 16, "length_beats": 32},
+    ]
+    markers = [
+        {"beat": 0, "name": "Intro"},
+        {"beat": 16, "name": "Drop", "color": "#ff0000"},
+    ]
+    preview = await arrange_timeline(engine, placements=placements, markers=markers)
+    steps = preview["changes"]
+    assert len(steps) == 4
+    assert steps[0]["method"] == "arrangement.place_clip"
+    assert steps[0]["params"] == {"track": 0, "slot": 0, "start_beat": 0, "length_beats": 16}
+    assert steps[1]["method"] == "arrangement.place_clip"
+    assert steps[1]["params"] == {"track": "uuid-drums", "slot": 1, "start_beat": 16, "length_beats": 32}
+    assert steps[2]["method"] == "markers.add"
+    assert steps[2]["params"] == {"beat": 0, "name": "Intro"}
+    assert steps[3]["method"] == "markers.add"
+    assert steps[3]["params"] == {"beat": 16, "name": "Drop", "color": "#ff0000"}
+
+    await client.close()
+
+
+async def test_subprocess_improvements(host, tmp_path):
+    path, _, state = host
+    state["methods"].extend([
+        method("arrangement.place_clip", "edit"),
+        method("markers.add", "edit"),
+    ])
+    out_root = tmp_path / "sdk_out"
+    out_root.mkdir()
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=[
+            "-m", "omnidaw_agent.server",
+            "--endpoint", str(path),
+            "--allow-write",
+            "--allow-overwrite",
+            "--output-root", str(out_root),
+        ],
+    )
+    async with MCPClient(params) as client:
+        status_res = await client.call_tool("agent_status", {})
+        status_text = status_res.content[0].text
+        status_data = json.loads(status_text)
+        assert status_data["policy"]["allow_overwrite"] is True
+        assert status_data["file_permissions"] == "disabled"
+
+        # Call agent_arrange_timeline via MCP
+        res = await client.call_tool("agent_arrange_timeline", {
+            "placements": [{"track": 0, "slot": 0, "start_beat": 0, "length_beats": 8}],
+            "markers": [{"beat": 0, "name": "Start"}],
+        })
+        assert not res.is_error
+        timeline_plan = json.loads(res.content[0].text)
+        assert len(timeline_plan["changes"]) == 2

@@ -92,5 +92,38 @@ async def export_preview(engine, path=None, folder=None, start_beat=0, end_beat=
     params = {"start_beat": start_beat, "end_beat": end_beat, "bit_depth": 24}
     params.update({"path": path, "fast": True} if path else {"folder": folder})
     engine.check_files("export.render" if path else "export.stems", params)
-    return await engine.preview([step("export.render" if path else "export.stems", params, "export", True)],
+
+    steps = []
+    # Both single-file mixdown and multi-track stems render the timeline: ensure
+    # OMNi is actually following the arrangement to prevent silent exports.
+    is_arrangement = False
+    if "arrangement.get" in engine.methods():
+        try:
+            arr = await engine.call("arrangement.get")
+            if isinstance(arr, dict):
+                is_arrangement = arr.get("playback") == "arrangement"
+        except Exception:
+            is_arrangement = False
+
+    if not is_arrangement:
+        steps.extend([
+            step("transport.stop"),
+            step("transport.seek", {"beat": 0}),
+            step("arrangement.play", {"from_beat": 0}),
+            step("transport.stop"),
+        ])
+
+    steps.append(step("export.render" if path else "export.stems", params, "export", True))
+    return await engine.preview(steps,
                                 "Render WAV/stems; wait for job; verify files separately with agent_verify_wav")
+
+
+async def arrange_timeline(engine, placements, markers=None):
+    steps = []
+    for placement in placements:
+        params = {k: v for k, v in placement.items() if k in {"track", "slot", "start_beat", "length_beats"}}
+        steps.append(step("arrangement.place_clip", params))
+    for marker in markers or []:
+        params = {k: v for k, v in marker.items() if k in {"beat", "name", "color", "end_beat"}}
+        steps.append(step("markers.add", params))
+    return await engine.preview(steps, "Batch timeline clip placements and markers")

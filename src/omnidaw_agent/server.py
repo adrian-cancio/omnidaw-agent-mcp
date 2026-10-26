@@ -14,7 +14,13 @@ from mcp.server.stdio import stdio_server
 from .audio import verify_wav
 from .client import Client, OmniError
 from .engine import Engine
-from .workflows import arrange_preview, export_preview, loop_preview, measure
+from .workflows import (
+    arrange_preview,
+    arrange_timeline,
+    export_preview,
+    loop_preview,
+    measure,
+)
 
 
 def schema(properties=None, required=None):
@@ -30,6 +36,7 @@ TOOLS = {
     "agent_apply": ("Apply a previously returned preview once, subject to operator startup policy", schema({"plan_id": STRING}, ["plan_id"])),
     "agent_loop_preview": ("Preview deterministic native four-part electronic loop using live instruments", schema({"seed": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807}, "bpm": {"type": "number", "minimum": 40, "maximum": 240}})),
     "agent_arrange_preview": ("Preview sections, duplication/transforms, automation and save", schema({"sections": {"type": "array"}, "transforms": {"type": "array"}, "automation": {"type": "array"}, "save_path": STRING}, ["sections"])),
+    "agent_arrange_timeline": ("Preview batch timeline clip placements and optional markers", schema({"placements": {"type": "array", "items": {"type": "object", "properties": {"track": {"oneOf": [STRING, {"type": "integer"}]}, "slot": {"type": "integer", "minimum": 0, "maximum": 255}, "start_beat": NUMBER, "length_beats": NUMBER}, "required": ["track", "slot", "start_beat"]}}, "markers": {"type": "array", "items": {"type": "object", "properties": {"beat": NUMBER, "name": STRING, "color": STRING, "end_beat": NUMBER}, "required": ["beat", "name"]}}}, ["placements"])),
     "agent_measure": ("Measure master or track, propose mastering chain, no perceptual claims", schema({"target": STRING, "seconds": {"type": "number", "minimum": 1, "maximum": 30}, "source": {"oneOf": [STRING, {"type": "object"}]}})),
     "agent_export_preview": ("Preview render/stems with bounded job waiting", schema({"path": STRING, "folder": STRING, "start_beat": NUMBER, "end_beat": NUMBER})),
     "agent_wait": ("Bounded job waiting with progress, no restart on timeout", schema({"job": {"type": "integer", "minimum": 1}, "deadline": {"type": "number", "exclusiveMinimum": 0, "maximum": 600}}, ["job"])),
@@ -75,7 +82,10 @@ async def serve(engine):
                         connection = str(error)
                     result = {"connection": connection, "catalog_provenance": engine.provenance,
                         "catalog_methods": len(engine.methods()), "capabilities": engine.client.capabilities,
+                        "file_permissions": engine.file_permissions,
+                        "file_permission_status": engine.file_permissions,
                         "policy": {"allow_write": engine.allow_write, "allow_risk": engine.allow_risk,
+                                   "allow_overwrite": engine.allow_overwrite,
                                    "domains": sorted(engine.domains) if engine.domains else "all",
                                    "output_root": str(engine.output_root)}}
                 elif name == "agent_inspect":
@@ -88,6 +98,8 @@ async def serve(engine):
                     result = await loop_preview(engine, **args)
                 elif name == "agent_arrange_preview":
                     result = await arrange_preview(engine, **args)
+                elif name == "agent_arrange_timeline":
+                    result = await arrange_timeline(engine, **args)
                 elif name == "agent_measure":
                     result = await measure(engine, **args)
                 elif name == "agent_export_preview":
@@ -124,16 +136,18 @@ def main():
     parser.add_argument("--domains", help="Comma-separated backend domain allowlist; applies to workflows too")
     parser.add_argument("--allow-write", action="store_true", help="Operator authorizes control/edit operations")
     parser.add_argument("--allow-risk", action="store_true", help="Operator authorizes replacement/destructive/history operations")
+    parser.add_argument("--allow-overwrite", action="store_true", help="Operator authorizes overwriting existing files within output root")
     parser.add_argument("--output-root", help="Constrain new output files to this directory")
     parser.add_argument("--diagnose", action="store_true")
     args = parser.parse_args()
     engine = Engine(Client(args.endpoint), domains=args.domains.split(",") if args.domains else None,
-                    allow_write=args.allow_write, allow_risk=args.allow_risk, output_root=args.output_root)
+                    allow_write=args.allow_write, allow_risk=args.allow_risk,
+                    output_root=args.output_root, allow_overwrite=args.allow_overwrite)
     if args.diagnose:
         async def diagnose():
             try:
                 await engine.refresh()
-                print(json.dumps({"connected": True, "methods": len(engine.methods()), "capabilities": engine.client.capabilities}))
+                print(json.dumps({"connected": True, "methods": len(engine.methods()), "capabilities": engine.client.capabilities, "file_permissions": engine.file_permissions}))
             except OmniError as error:
                 print(json.dumps({"connected": False, "error": str(error), "provenance": engine.provenance}))
             finally:

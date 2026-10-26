@@ -32,15 +32,26 @@ def risky(method, params):
 
 
 class Engine:
-    def __init__(self, client, domains=None, allow_write=False, allow_risk=False, output_root=None):
+    def __init__(self, client, domains=None, allow_write=False, allow_risk=False, output_root=None, allow_overwrite=False):
         self.client = client
         self.domains = set(domains) if domains else None
         self.allow_write, self.allow_risk = allow_write, allow_risk
+        self.allow_overwrite = allow_overwrite
         self.output_root = Path(output_root).resolve() if output_root else None
         self.catalog = json.loads(files("omnidaw_agent").joinpath("catalog.json").read_text())
         self.provenance = "bundled official reference 0.21.0; NOT verified against running host"
         self.plans = {}
         self.lock = asyncio.Lock()
+
+    @property
+    def file_permissions(self):
+        return "enabled" if "files" in (self.client.capabilities or []) else "disabled"
+
+    def is_risky(self, method, params):
+        if self.allow_overwrite and method["name"] in {"session.save", "export.render"}:
+            filtered = {k: v for k, v in params.items() if k != "overwrite"}
+            return risky(method, filtered)
+        return risky(method, params)
 
     async def refresh(self):
         await self.client.connect()
@@ -58,9 +69,13 @@ class Engine:
         if list(Draft202012Validator(method["params"]).iter_errors(params)):
             raise OmniError("Parameters do not match the official schema for " + name)
         if enforce:
+            if name in {"audio.import", "audio.transcribe", "audio.split_stems"} and "files" not in (self.client.capabilities or []):
+                raise OmniError(
+                    f'File access capability "files" is missing for {name}. Enable "Let clients read audio files" in OMNi settings or set environment variable OMNI_API_FILES=1.'
+                )
             if method["effect"] != "read" and not self.allow_write:
                 raise OmniError("Operator policy denies writes/control; restart with --allow-write")
-            if risky(method, params) and not self.allow_risk:
+            if self.is_risky(method, params) and not self.allow_risk:
                 raise OmniError("Operator policy denies destructive/replacement/history operations; --allow-risk required")
             self.check_files(name, params)
         return method
@@ -75,12 +90,17 @@ class Engine:
         target = Path(path).resolve()
         if not target.is_relative_to(self.output_root):
             raise OmniError("Output escapes operator output root")
+        can_overwrite = (
+            self.allow_overwrite
+            and name in {"session.save", "export.render"}
+            and bool(params.get("overwrite"))
+        )
         if key == "folder":
             if not target.is_dir() or any(target.iterdir()):
                 raise OmniError("Output folder must exist and be empty")
-        elif target.exists() or not target.parent.is_dir():
+        elif not target.parent.is_dir() or target.is_dir() or (target.exists() and not can_overwrite):
             raise OmniError("Output exists or parent is missing; existing files are never overwritten")
-        if params.get("overwrite"):
+        if params.get("overwrite") and not can_overwrite:
             raise OmniError("File overwrite is not supported by this server")
 
     async def call(self, name, params=None):
@@ -145,7 +165,7 @@ class Engine:
         self.plans[plan_id] = plan
         return {"plan_id": plan_id, "label": label, "changes": steps,
                 "authorization": "Apply requires operator startup policy, not model approval. Plans expire in 300s.",
-                "risks": [s["method"] for s in steps if risky(self.methods()[s["method"]], s.get("params", {}))]}
+                "risks": [s["method"] for s in steps if self.is_risky(self.methods()[s["method"]], s.get("params", {}))]}
 
     async def apply(self, plan_id, progress=None):
         async with self.lock:
@@ -158,7 +178,7 @@ class Engine:
             # Fail early on policy for all steps, including symbolic destinations.
             for step in plan["steps"]:
                 method = self.methods().get(step["method"])
-                if method is None or (method["effect"] != "read" and not self.allow_write) or (risky(method, step.get("params", {})) and not self.allow_risk):
+                if method is None or (method["effect"] != "read" and not self.allow_write) or (self.is_risky(method, step.get("params", {})) and not self.allow_risk):
                     raise OmniError("Plan preflight denied by domain or operator risk/write policy")
                 if not has_ref(step.get("params", {})):
                     self.check(step["method"], step.get("params", {}))
