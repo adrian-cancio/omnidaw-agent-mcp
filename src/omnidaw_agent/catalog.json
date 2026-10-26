@@ -1,0 +1,5150 @@
+{
+  "api_version": "0.21.0",
+  "errors": [
+    {
+      "code": -32700,
+      "name": "parse_error"
+    },
+    {
+      "code": -32600,
+      "name": "invalid_request"
+    },
+    {
+      "code": -32601,
+      "name": "method_not_found"
+    },
+    {
+      "code": -32602,
+      "name": "invalid_params"
+    },
+    {
+      "code": -32603,
+      "name": "internal"
+    },
+    {
+      "code": -32001,
+      "name": "unauthorized"
+    },
+    {
+      "code": -32002,
+      "name": "not_found"
+    },
+    {
+      "code": -32003,
+      "name": "invalid_state"
+    },
+    {
+      "code": -32004,
+      "name": "busy"
+    },
+    {
+      "code": -32005,
+      "name": "incompatible"
+    },
+    {
+      "code": -32006,
+      "name": "unavailable"
+    }
+  ],
+  "methods": [
+    {
+      "domain": "session",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "session.info",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Overview of the open project: name, unsaved changes, sample rate, number of tracks, scenes and return buses, and whether the audio engine runs. Call this first to orient yourself.",
+      "title": "Session Info"
+    },
+    {
+      "domain": "session",
+      "effect": "control",
+      "example": {
+        "path": "C:/Music/song.omni"
+      },
+      "idempotent": true,
+      "name": "session.save",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "overwrite": {
+            "description": "Replace another existing file (default false).",
+            "type": "boolean"
+          },
+          "path": {
+            "description": "Absolute .omni path (default: the project's own).",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.10.0",
+      "summary": "Save the project with its audio collected next to it, to its own file or to an absolute .omni path (a new name becomes the project's). Does not overwrite another existing file unless asked.",
+      "title": "Save Project"
+    },
+    {
+      "domain": "transport",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "transport.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Play / record state, tempo (BPM), time signature and the playhead position in beats.",
+      "title": "Transport State"
+    },
+    {
+      "domain": "transport",
+      "effect": "control",
+      "example": {},
+      "idempotent": true,
+      "name": "transport.play",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Start playback from the playhead. Does nothing if already playing.",
+      "title": "Play"
+    },
+    {
+      "domain": "transport",
+      "effect": "control",
+      "example": {},
+      "idempotent": true,
+      "name": "transport.stop",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Stop playback (and a running recording, which is then kept).",
+      "title": "Stop"
+    },
+    {
+      "domain": "transport",
+      "effect": "edit",
+      "example": {
+        "bpm": 124.0
+      },
+      "idempotent": true,
+      "name": "transport.set_tempo",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bpm": {
+            "description": "Tempo in beats per minute.",
+            "maximum": 240.0,
+            "minimum": 40.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "bpm"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Set the project tempo in BPM (40-240). Arrangement clips keep their musical position. Undoable.",
+      "title": "Set Tempo"
+    },
+    {
+      "domain": "transport",
+      "effect": "control",
+      "example": {
+        "beat": 16.0
+      },
+      "idempotent": true,
+      "name": "transport.seek",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "beat": {
+            "description": "Song position in beats.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "beat"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Move the playhead to a song position in beats (0 = song start).",
+      "title": "Move Playhead"
+    },
+    {
+      "domain": "tempo",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "tempo.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.18.0",
+      "summary": "The project tempo, the tempo map (tempo changes and ramps over the song) and the time signature changes.",
+      "title": "Get Tempo Map"
+    },
+    {
+      "domain": "tempo",
+      "effect": "edit",
+      "example": {
+        "points": [
+          {
+            "beat": 0,
+            "bpm": 174
+          },
+          {
+            "beat": 96,
+            "bpm": 174,
+            "curve": "linear"
+          },
+          {
+            "beat": 128,
+            "bpm": 160
+          }
+        ]
+      },
+      "idempotent": true,
+      "name": "tempo.set_map",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "points": {
+            "description": "Tempo points in time order.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "beat": {
+                  "description": "Song position in beats.",
+                  "maximum": 1000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "bpm": {
+                  "description": "Tempo from here.",
+                  "maximum": 999.0,
+                  "minimum": 20.0,
+                  "type": "number"
+                },
+                "curve": {
+                  "description": "step = jump here, linear = ramp to the next point.",
+                  "enum": [
+                    "step",
+                    "linear"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "beat",
+                "bpm"
+              ],
+              "type": "object"
+            },
+            "maxItems": 256,
+            "type": "array"
+          }
+        },
+        "required": [
+          "points"
+        ],
+        "type": "object"
+      },
+      "since": "0.18.0",
+      "summary": "Replace the tempo map: points at song beats with a tempo, each a step or a linear ramp to the next. Timeline clips, automation, markers and the loop stay on their beats. Empty points = one tempo (transport.set_tempo). A step at a section boundary plays exactly; a ramp inside a MIDI clip is followed block by block. Undoable.",
+      "title": "Set Tempo Map"
+    },
+    {
+      "domain": "tempo",
+      "effect": "edit",
+      "example": {
+        "points": [
+          {
+            "bar": 0,
+            "denominator": 4,
+            "numerator": 4
+          },
+          {
+            "bar": 16,
+            "denominator": 8,
+            "numerator": 7
+          }
+        ]
+      },
+      "idempotent": true,
+      "name": "tempo.set_time_signatures",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "points": {
+            "description": "Signature changes in bar order.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "bar": {
+                  "description": "Bar (0-based) where it starts.",
+                  "maximum": 100000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "denominator": {
+                  "description": "Beat unit.",
+                  "enum": [
+                    1,
+                    2,
+                    4,
+                    8,
+                    16,
+                    32
+                  ],
+                  "type": "integer"
+                },
+                "numerator": {
+                  "description": "Beats per bar.",
+                  "maximum": 32,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "bar",
+                "numerator",
+                "denominator"
+              ],
+              "type": "object"
+            },
+            "maxItems": 256,
+            "type": "array"
+          }
+        },
+        "required": [
+          "points"
+        ],
+        "type": "object"
+      },
+      "since": "0.18.0",
+      "summary": "Replace the time signature changes: from a bar on, so many beats of a unit (7/8, 3/4, …). Empty = the project signature everywhere. Undoable.",
+      "title": "Set Time Signatures"
+    },
+    {
+      "domain": "groove",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "groove.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.18.0",
+      "summary": "The project groove every clip follows (unless its track opts out): style, amount, grid, accent, lean, humanize; and which tracks play straight.",
+      "title": "Get Groove"
+    },
+    {
+      "domain": "groove",
+      "effect": "edit",
+      "example": {
+        "amount": 0.55,
+        "humanize_ms": 4,
+        "style": "mpc"
+      },
+      "idempotent": true,
+      "name": "groove.set",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "accent": {
+            "description": "Depth of the style's dynamics.",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "type": "number"
+          },
+          "amount": {
+            "description": "0 = straight, 1 = the style's full shape.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "grid": {
+            "description": "Subdivision that swings.",
+            "enum": [
+              "8th",
+              "16th",
+              "32nd"
+            ],
+            "type": "string"
+          },
+          "humanize_ms": {
+            "description": "Random timing up to this many ms.",
+            "maximum": 30.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "humanize_vel": {
+            "description": "Random velocity, 0-1.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "lean_ms": {
+            "description": "Beats 2 and 4 late (+) or early (-).",
+            "maximum": 40.0,
+            "minimum": -40.0,
+            "type": "number"
+          },
+          "seed": {
+            "description": "Humanize seed.",
+            "maximum": 4294967295,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "style": {
+            "description": "Groove style.",
+            "enum": [
+              "straight",
+              "mpc",
+              "jazz",
+              "nested",
+              "push",
+              "drunk",
+              "samba",
+              "waltz",
+              "custom"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.18.0",
+      "summary": "Change the project groove (fields left out stay): style (straight, mpc, jazz, nested, push, drunk, samba, waltz, custom), amount 0-1, grid 8th/16th/32nd, accent, lean_ms, humanize_ms, humanize_vel, seed. Picking a style without amount or grid takes the style's own. Undoable.",
+      "title": "Set Groove"
+    },
+    {
+      "domain": "groove",
+      "effect": "edit",
+      "example": {
+        "follow": false,
+        "track": 1
+      },
+      "idempotent": true,
+      "name": "groove.set_track",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "follow": {
+            "description": "Follow the groove.",
+            "type": "boolean"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "follow"
+        ],
+        "type": "object"
+      },
+      "since": "0.18.0",
+      "summary": "Whether a track follows the project groove (false = it plays straight, e.g. a tight bass under swung hats). Undoable.",
+      "title": "Track Groove"
+    },
+    {
+      "domain": "tracks",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "tracks.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Every track in mixer order with its id, kind (midi/audio/group/vca), instrument, fader (dB), pan, mute/solo/arm, colour, group, insert effects and send levels. Use the ids in later calls; indices shift when tracks move.",
+      "title": "List Tracks"
+    },
+    {
+      "domain": "tracks",
+      "effect": "edit",
+      "example": {
+        "instrument": "builtin://omni-synth",
+        "kind": "midi",
+        "name": "Bass"
+      },
+      "idempotent": false,
+      "name": "tracks.create",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "instrument": {
+            "description": "instruments.list uri (builtin or plugin) or plugin name (MIDI only).",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Track type.",
+            "enum": [
+              "midi",
+              "audio"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "Track name (default: the instrument's name).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Add a track at the end. kind 'midi' plays notes through an instrument: pass an instrument from instruments.list: a builtin URI or an installed plugin (its uri = path, or its name). Without one the track is silent. Plugins load in the background: their parameters show in params.list a moment later. kind 'audio' plays samples. Returns the new track. Undoable.",
+      "title": "Create Track"
+    },
+    {
+      "domain": "tracks",
+      "effect": "edit",
+      "example": {
+        "pan": -0.2,
+        "track": 0,
+        "volume_db": -6.0
+      },
+      "idempotent": true,
+      "name": "tracks.update",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "description": "Colour as #rrggbb.",
+            "type": "string"
+          },
+          "mute": {
+            "description": "Mute.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "New name.",
+            "type": "string"
+          },
+          "pan": {
+            "description": "Pan, -1 left .. +1 right.",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "type": "number"
+          },
+          "solo": {
+            "description": "Solo.",
+            "type": "boolean"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "volume_db": {
+            "description": "Fader in dB; -120 or lower = fully down.",
+            "maximum": 6.0,
+            "minimum": -200.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Change a track's name, fader (volume_db, up to +6 dB), pan (-1..1), mute, solo or colour. Only the fields given change. Returns the track. One undo step (solo is monitoring and is not recorded).",
+      "title": "Update Track"
+    },
+    {
+      "domain": "tracks",
+      "effect": "destructive",
+      "example": {
+        "track": 2
+      },
+      "idempotent": false,
+      "name": "tracks.delete",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Delete a track with its clips, devices and automation. Groups are not deleted this way (ungroup first). Indices of later tracks shift down. Undoable: undo rebuilds the whole track, instrument state included.",
+      "title": "Delete Track"
+    },
+    {
+      "domain": "tracks",
+      "effect": "edit",
+      "example": {
+        "track": 1
+      },
+      "idempotent": false,
+      "name": "tracks.duplicate",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.15.0",
+      "summary": "Copy a track (instrument, clips, effects, mixer settings, automation) right after it, named '<name> (Copy)'. A plugin instrument loads in the background: the copy shows in tracks.list a moment later. Undoable.",
+      "title": "Duplicate Track"
+    },
+    {
+      "domain": "tracks",
+      "effect": "edit",
+      "example": {
+        "instrument": "builtin://piano-synth",
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "tracks.set_instrument",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "instrument": {
+            "description": "instruments.list uri, or a plugin name, e.g. Surge XT.",
+            "type": "string"
+          },
+          "name": {
+            "description": "New track name (default: keep it).",
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "instrument"
+        ],
+        "type": "object"
+      },
+      "since": "0.3.0",
+      "summary": "Replace the instrument of a MIDI track with one from instruments.list (builtin, or an installed plugin, loaded in the background). The track keeps its name, clips, effects and mixer settings. Undoable: undo brings the previous instrument back with its sound.",
+      "title": "Set Instrument"
+    },
+    {
+      "domain": "tracks",
+      "effect": "edit",
+      "example": {
+        "before": 0,
+        "track": 3
+      },
+      "idempotent": true,
+      "name": "tracks.move",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.3.0",
+      "summary": "Move a track (a group with all its members) right before another track, joining that track's group, or to the end when 'before' is absent. Returns the new track order. Undoable.",
+      "title": "Move Track"
+    },
+    {
+      "domain": "instruments",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "instruments.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Instruments that tracks.create can load: name, family and the URI to pass as 'instrument'; installed plugins (group Plugin, with vendor and format) after the builtins. Families: Synth (Omni Synth = subtractive/wavetable all-rounder), Keys (Piano), Physical model (strings, winds, plucked, mallets), Drums (TOMNIC drum synth), Image to sound, DJ.",
+      "title": "List Instruments"
+    },
+    {
+      "domain": "instruments",
+      "effect": "read",
+      "example": {
+        "query": "leads",
+        "track": 4
+      },
+      "idempotent": true,
+      "name": "instruments.presets",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "At most this many (default 200).",
+            "maximum": 200,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Skip this many matches.",
+            "maximum": 1000000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Words that must all appear in the name or category.",
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.14.0",
+      "summary": "Preset files (.fxp) installed with the external plugin on a track, e.g. Surge XT's factory patches: name, category (their folders) and path. Filter with query words (\"bass reese\", \"leads\"); pages of up to 200.",
+      "title": "List Presets"
+    },
+    {
+      "domain": "instruments",
+      "effect": "edit",
+      "example": {
+        "path": "C:/Program Files/Common Files/CLAP/Surge Synth Team/SurgeXTData/patches_factory/Leads/Moogy Saw.fxp",
+        "track": 4
+      },
+      "idempotent": true,
+      "name": "instruments.load_preset",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Preset file path from instruments.presets.",
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "path"
+        ],
+        "type": "object"
+      },
+      "since": "0.14.0",
+      "summary": "Load a preset file (from instruments.presets) into the plugin on a track: its whole sound, as the plugin's own preset browser would. Then params.list shows the new values to tweak. Undoable.",
+      "title": "Load Preset"
+    },
+    {
+      "domain": "scenes",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "scenes.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Scene rows of the session: index, name, colour and how many tracks have a clip in the row. Clip slot N of every track belongs to scene N.",
+      "title": "List Scenes"
+    },
+    {
+      "domain": "scenes",
+      "effect": "control",
+      "example": {
+        "scene": 0
+      },
+      "idempotent": true,
+      "name": "scenes.launch",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "scene": {
+            "description": "0-based scene row.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start_transport": {
+            "description": "Start playback if stopped (default true).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scene"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Launch every clip of a scene row together, quantised like a click on the scene. Starts the transport unless start_transport is false.",
+      "title": "Launch Scene"
+    },
+    {
+      "domain": "scenes",
+      "effect": "edit",
+      "example": {
+        "name": "Verse",
+        "scene": 0
+      },
+      "idempotent": true,
+      "name": "scenes.update",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "description": "#rrggbb, or empty for the default colour.",
+            "type": "string"
+          },
+          "name": {
+            "description": "New name.",
+            "type": "string"
+          },
+          "scene": {
+            "description": "0-based scene row.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scene"
+        ],
+        "type": "object"
+      },
+      "since": "0.3.0",
+      "summary": "Rename or recolour a scene row (e.g. 'Intro', 'Drop'). Undoable.",
+      "title": "Update Scene"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "bars": 8,
+        "chords_from": {
+          "slot": 0,
+          "track": 2
+        },
+        "key": {
+          "mode": "minor",
+          "root": "F"
+        },
+        "register": "high",
+        "slot": 0,
+        "style": "synth_arp",
+        "track": 4
+      },
+      "idempotent": true,
+      "name": "clips.generate_melody",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bars": {
+            "description": "Bars to write (default 4).",
+            "maximum": 16,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "chords_from": {
+            "additionalProperties": false,
+            "properties": {
+              "slot": {
+                "description": "0-based clip slot (scene row) on the track.",
+                "maximum": 255,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "track": {
+                "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                "oneOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "track",
+              "slot"
+            ],
+            "type": "object"
+          },
+          "density": {
+            "description": "Notes per bar (default medium).",
+            "enum": [
+              "sparse",
+              "light",
+              "medium",
+              "dense",
+              "very_dense"
+            ],
+            "type": "string"
+          },
+          "key": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "description": "Mode (default major): major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant.",
+                "type": "string"
+              },
+              "root": {
+                "description": "Tonic: C, C#, Db, D … B.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root"
+            ],
+            "type": "object"
+          },
+          "register": {
+            "description": "Pitch range (default mid).",
+            "enum": [
+              "low",
+              "mid",
+              "high",
+              "full"
+            ],
+            "type": "string"
+          },
+          "seed": {
+            "description": "Same seed, same melody (default 1).",
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "style": {
+            "description": "Melody style.",
+            "enum": [
+              "stepwise_flow",
+              "minimal_cell",
+              "classical_arch",
+              "funk_groove",
+              "celtic_reel",
+              "bebop_line",
+              "arpeggio_loop",
+              "synth_arp",
+              "sequence_run",
+              "ambient_drift",
+              "tension_build",
+              "modal_motive"
+            ],
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "style",
+          "key"
+        ],
+        "type": "object"
+      },
+      "since": "0.15.0",
+      "summary": "Write a melody into a MIDI slot with the piano roll's melody generator: a style (stepwise_flow, minimal_cell, classical_arch, funk_groove, celtic_reel, bebop_line, arpeggio_loop, synth_arp, sequence_run, ambient_drift, tension_build, modal_motive), a key, bars, register and density. It sits on the chords of the slot's chord lane, or of chords_from (e.g. the pad slot written by clips.write_progression). Same seed, same melody. Undoable.",
+      "title": "Generate Melody"
+    },
+    {
+      "domain": "clips",
+      "effect": "read",
+      "example": {
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "The session clip slots (scene rows) of a track: empty or not, kind (midi/audio/sequencer), loop length in beats, note count, playing / queued.",
+      "title": "List Clips"
+    },
+    {
+      "domain": "clips",
+      "effect": "read",
+      "example": {
+        "slot": 0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.get_notes",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Notes of a session MIDI clip (pitch, start and duration in beats, velocity) and its loop length.",
+      "title": "Read Clip Notes"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "length_beats": 4.0,
+        "notes": [
+          {
+            "duration": 0.5,
+            "pitch": 48,
+            "start": 0.0,
+            "velocity": 110
+          },
+          {
+            "duration": 0.5,
+            "pitch": 55,
+            "start": 1.0
+          }
+        ],
+        "slot": 0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.write_midi",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "length_beats": {
+            "description": "Loop length in beats.",
+            "maximum": 1024.0,
+            "minimum": 0.25,
+            "type": "number"
+          },
+          "mode": {
+            "description": "Replace or merge the clip's notes.",
+            "enum": [
+              "replace",
+              "merge"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "description": "Notes to write.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "chance": {
+                  "description": "Chance it plays each pass, 0-1 (default 1).",
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "duration": {
+                  "description": "Length in beats.",
+                  "maximum": 1024.0,
+                  "minimum": 0.0001,
+                  "type": "number"
+                },
+                "pan": {
+                  "description": "Per-note pan, -1 left to 1 right.",
+                  "maximum": 1.0,
+                  "minimum": -1.0,
+                  "type": "number"
+                },
+                "pitch": {
+                  "description": "MIDI note number (60 = middle C).",
+                  "maximum": 127,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "pitch_offset": {
+                  "description": "Pitch offset in semitones.",
+                  "maximum": 24,
+                  "minimum": -24,
+                  "type": "integer"
+                },
+                "pressure": {
+                  "description": "Poly pressure during the note, 0-1.",
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "start": {
+                  "description": "Start from the clip start, in beats.",
+                  "maximum": 1024.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "timing": {
+                  "description": "Micro-timing in beats (- early, + late).",
+                  "maximum": 0.25,
+                  "minimum": -0.25,
+                  "type": "number"
+                },
+                "velocity": {
+                  "description": "Velocity 1-127 (default 100).",
+                  "maximum": 127,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "volume": {
+                  "description": "Sustained note volume, 0-1 (default 1).",
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "pitch",
+                "start",
+                "duration"
+              ],
+              "type": "object"
+            },
+            "maxItems": 4096,
+            "type": "array"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "notes"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Write notes into a session clip slot of a MIDI track, creating the clip if the slot is empty. mode 'replace' (default) leaves exactly these notes, 'merge' adds them. length_beats sets the loop (default: the notes rounded up to whole bars). Times are in beats from the clip start (1 beat = a quarter note; in 4/4 a bar is 4 beats). The clip loops; launch it with clips.launch. Undoable.",
+      "title": "Write MIDI Clip"
+    },
+    {
+      "domain": "clips",
+      "effect": "control",
+      "example": {
+        "slot": 0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.launch",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start_transport": {
+            "description": "Start playback if stopped (default true).",
+            "type": "boolean"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Play a session clip, quantised like a click on its slot. Starts the transport unless start_transport is false.",
+      "title": "Launch Clip"
+    },
+    {
+      "domain": "clips",
+      "effect": "control",
+      "example": {
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.stop",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Stop the session clip of one track, or of every track when no track is given.",
+      "title": "Stop Clips"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "progression": {
+          "chords": "i VI III VII",
+          "key": {
+            "mode": "minor",
+            "root": "A"
+          },
+          "perform": {
+            "bass": true,
+            "pattern": "pulse8"
+          }
+        },
+        "slot": 0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.write_progression",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "progression": {
+            "additionalProperties": false,
+            "properties": {
+              "chords": {
+                "description": "Roman numerals or chord symbols. Each chord is one bar unless bars are marked: '|' separates bars and splits one between its chords, 'I:2' = 2 beats, '.' holds, '%' repeats the bar. E.g. 'ii7 V7 Imaj7 Imaj7', 'Am F C G', '| I | vi | IV V |'.",
+                "type": "string"
+              },
+              "generate": {
+                "additionalProperties": false,
+                "properties": {
+                  "bars": {
+                    "description": "Length in bars (default 4).",
+                    "maximum": 64,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "complexity": {
+                    "description": "0 triads .. 1 extended/altered.",
+                    "maximum": 1.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "seed": {
+                    "description": "Same seed = same progression.",
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "style": {
+                    "description": "Style from theory.vocabulary.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "style"
+                ],
+                "type": "object"
+              },
+              "key": {
+                "additionalProperties": false,
+                "properties": {
+                  "mode": {
+                    "description": "Mode (default major): major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant.",
+                    "type": "string"
+                  },
+                  "root": {
+                    "description": "Tonic: C, C#, Db, D … B.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "root"
+                ],
+                "type": "object"
+              },
+              "library": {
+                "description": "Name of a progression from theory.library.",
+                "type": "string"
+              },
+              "perform": {
+                "additionalProperties": false,
+                "properties": {
+                  "bass": {
+                    "description": "Write a bass line (default false).",
+                    "type": "boolean"
+                  },
+                  "centre": {
+                    "description": "MIDI note the voicings centre on (default 60).",
+                    "maximum": 96,
+                    "minimum": 36,
+                    "type": "integer"
+                  },
+                  "chords": {
+                    "description": "Write the chord voicings (default true).",
+                    "type": "boolean"
+                  },
+                  "humanise": {
+                    "description": "Timing and velocity spread (default 0).",
+                    "maximum": 1.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "pattern": {
+                    "description": "Playing pattern from theory.vocabulary (default block).",
+                    "type": "string"
+                  },
+                  "top": {
+                    "description": "Double the top voice an octave up (default false).",
+                    "type": "boolean"
+                  },
+                  "velocity": {
+                    "description": "Velocity 1-127 (default 100).",
+                    "maximum": 127,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [],
+                "type": "object"
+              }
+            },
+            "required": [
+              "key"
+            ],
+            "type": "object"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "progression"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Render a chord progression (text, library or generated, see theory.progression) into a session slot of a MIDI track and set the clip's chord lane, so the user sees the chords in the piano roll. The loop length is the progression's. Replaces the clip's notes. Undoable.",
+      "title": "Write Progression"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "lanes": [
+          {
+            "channel": "kick",
+            "steps": "x...x...x...x..."
+          },
+          {
+            "channel": "snare",
+            "steps": "....X.......X..."
+          },
+          {
+            "channel": "hihat",
+            "steps": "x.x.x.x.x.x.x.x.",
+            "swing": 30,
+            "velocity": 70
+          }
+        ],
+        "slot": 0,
+        "track": 3
+      },
+      "idempotent": true,
+      "name": "clips.write_drums",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "lanes": {
+            "description": "Voices to write.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "channel": {
+                  "description": "Voice: kick, snare, hihat, bass, tom, perc, cymbal, fx, or 0-7.",
+                  "oneOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "maximum": 7,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "steps": {
+                  "description": "Steps: x hit, X accent, . rest (1-64).",
+                  "type": "string"
+                },
+                "swing": {
+                  "description": "Swing 0 straight .. 100 triplet.",
+                  "maximum": 100.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "velocity": {
+                  "description": "Hit velocity (default 100).",
+                  "maximum": 127,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "channel",
+                "steps"
+              ],
+              "type": "object"
+            },
+            "maxItems": 8,
+            "type": "array"
+          },
+          "mode": {
+            "description": "Replace the pattern or merge lanes.",
+            "enum": [
+              "replace",
+              "merge"
+            ],
+            "type": "string"
+          },
+          "rate": {
+            "description": "Step length (default 1/16).",
+            "enum": [
+              "1/4",
+              "1/8",
+              "1/8t",
+              "1/16",
+              "1/16t",
+              "1/32"
+            ],
+            "type": "string"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "lanes"
+        ],
+        "type": "object"
+      },
+      "since": "0.8.0",
+      "summary": "Write a drum pattern into a session slot of a TOMNIC track (TOMNIC plays its own step pattern, not clip notes). Each lane is one voice (kick, snare, hihat, bass, tom, perc, cymbal, fx, or 0-7) with a step string: x = hit, X = accent, . = rest; '|' and spaces may mark bars. At rate 1/16 sixteen steps are one 4/4 bar, e.g. kick \"x...x...x...x...\", snare \"....x.......x...\". Lanes may differ in length (polymeters). Replaces the pattern, or with mode merge only the lanes given. Undoable.",
+      "title": "Write Drum Pattern"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "slot": 0,
+        "to_slot": 1,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.duplicate",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "to_slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "to_track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "to_slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Copy a session clip to another slot, on the same track or another one of the same kind (MIDI to MIDI, audio to audio). Overwrites the target. Undoable.",
+      "title": "Duplicate Clip"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "quantize": 0.25,
+        "slot": 0,
+        "track": 0,
+        "transpose": -12
+      },
+      "idempotent": false,
+      "name": "clips.transform",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "quantize": {
+            "description": "Grid in beats.",
+            "maximum": 4.0,
+            "minimum": 0.015625,
+            "type": "number"
+          },
+          "quantize_strength": {
+            "description": "Share of the way to the grid (default 1).",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "transpose": {
+            "description": "Semitones.",
+            "maximum": 48,
+            "minimum": -48,
+            "type": "integer"
+          },
+          "velocity_offset": {
+            "description": "Added to velocity after scaling.",
+            "maximum": 127,
+            "minimum": -127,
+            "type": "integer"
+          },
+          "velocity_scale": {
+            "description": "Velocity multiplier.",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Edit every note of a MIDI clip at once: transpose (semitones), quantize starts to a grid in beats (0.25 = 1/16 in 4/4) with a strength, scale and offset velocities. Undoable.",
+      "title": "Transform Clip"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "length_beats": 16.0,
+        "slot": 0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.set_length",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "length_beats": {
+            "description": "Loop length in beats.",
+            "maximum": 1024.0,
+            "minimum": 0.25,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "length_beats"
+        ],
+        "type": "object"
+      },
+      "since": "0.3.0",
+      "summary": "Set the loop length of a session clip in beats (notes past the end stay but do not play). Undoable.",
+      "title": "Set Clip Length"
+    },
+    {
+      "domain": "clips",
+      "effect": "destructive",
+      "example": {
+        "slot": 1,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "clips.clear",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Empty a session clip slot (notes, audio, sequencer). Undoable.",
+      "title": "Clear Clip"
+    },
+    {
+      "domain": "theory",
+      "effect": "read",
+      "example": {
+        "mode": "dorian",
+        "root": "D"
+      },
+      "idempotent": true,
+      "name": "theory.scale",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "description": "Mode (default major): major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant.",
+            "type": "string"
+          },
+          "root": {
+            "description": "Tonic: C, C#, Db, D … B.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "The seven degrees of a key (names, pitch classes, MIDI notes in the middle-C octave) and its diatonic chords as numerals, triads and sevenths. Use it to stay in key when writing melodies and bass lines.",
+      "title": "Scale"
+    },
+    {
+      "domain": "theory",
+      "effect": "read",
+      "example": {
+        "octave": 3,
+        "symbol": "Fmaj7"
+      },
+      "idempotent": true,
+      "name": "theory.chord",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "octave": {
+            "description": "Octave of the root (4 = middle C's).",
+            "maximum": 8,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Chord symbol.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Notes of a chord symbol (C, Am7, F#m7b5, Bbmaj9, G7/B, Dsus4, …): pitch classes, names and MIDI notes in close position from the root.",
+      "title": "Chord"
+    },
+    {
+      "domain": "theory",
+      "effect": "read",
+      "example": {
+        "chords": "i VI III VII",
+        "key": {
+          "mode": "minor",
+          "root": "A"
+        },
+        "perform": {
+          "bass": true,
+          "pattern": "pulse8"
+        }
+      },
+      "idempotent": true,
+      "name": "theory.progression",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "chords": {
+            "description": "Roman numerals or chord symbols. Each chord is one bar unless bars are marked: '|' separates bars and splits one between its chords, 'I:2' = 2 beats, '.' holds, '%' repeats the bar. E.g. 'ii7 V7 Imaj7 Imaj7', 'Am F C G', '| I | vi | IV V |'.",
+            "type": "string"
+          },
+          "generate": {
+            "additionalProperties": false,
+            "properties": {
+              "bars": {
+                "description": "Length in bars (default 4).",
+                "maximum": 64,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "complexity": {
+                "description": "0 triads .. 1 extended/altered.",
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "seed": {
+                "description": "Same seed = same progression.",
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "style": {
+                "description": "Style from theory.vocabulary.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "style"
+            ],
+            "type": "object"
+          },
+          "key": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "description": "Mode (default major): major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant.",
+                "type": "string"
+              },
+              "root": {
+                "description": "Tonic: C, C#, Db, D … B.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root"
+            ],
+            "type": "object"
+          },
+          "library": {
+            "description": "Name of a progression from theory.library.",
+            "type": "string"
+          },
+          "perform": {
+            "additionalProperties": false,
+            "properties": {
+              "bass": {
+                "description": "Write a bass line (default false).",
+                "type": "boolean"
+              },
+              "centre": {
+                "description": "MIDI note the voicings centre on (default 60).",
+                "maximum": 96,
+                "minimum": 36,
+                "type": "integer"
+              },
+              "chords": {
+                "description": "Write the chord voicings (default true).",
+                "type": "boolean"
+              },
+              "humanise": {
+                "description": "Timing and velocity spread (default 0).",
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "pattern": {
+                "description": "Playing pattern from theory.vocabulary (default block).",
+                "type": "string"
+              },
+              "top": {
+                "description": "Double the top voice an octave up (default false).",
+                "type": "boolean"
+              },
+              "velocity": {
+                "description": "Velocity 1-127 (default 100).",
+                "maximum": 127,
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [],
+            "type": "object"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Turn a chord progression into voiced, voice-led notes ready for clips.write_midi: from text (numerals or symbols), from the library, or generated in a style. Optional bass line and playing pattern (arpeggios, pulses, strums, …). Deterministic. To write it straight into a clip with its chord lane, use clips.write_progression.",
+      "title": "Progression"
+    },
+    {
+      "domain": "theory",
+      "effect": "edit",
+      "example": {
+        "key": {
+          "mode": "minor",
+          "root": "F"
+        },
+        "slot": 0,
+        "track": 4,
+        "write_to": {
+          "perform": {
+            "pattern": "pad"
+          },
+          "slot": 1,
+          "track": 2
+        }
+      },
+      "idempotent": true,
+      "name": "theory.harmonize",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bars": {
+            "description": "Bars to harmonise (default: the clip's).",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "fit": {
+            "description": "0 = style, 1 = melody (default 0.7).",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "key": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "description": "Mode (default major): major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant.",
+                "type": "string"
+              },
+              "root": {
+                "description": "Tonic: C, C#, Db, D … B.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root"
+            ],
+            "type": "object"
+          },
+          "seed": {
+            "description": "Colour seed (default 1).",
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "style": {
+            "description": "Generator style from theory.vocabulary (default pop).",
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "write_to": {
+            "additionalProperties": false,
+            "properties": {
+              "perform": {
+                "additionalProperties": false,
+                "properties": {
+                  "bass": {
+                    "description": "Write a bass line (default false).",
+                    "type": "boolean"
+                  },
+                  "centre": {
+                    "description": "MIDI note the voicings centre on (default 60).",
+                    "maximum": 96,
+                    "minimum": 36,
+                    "type": "integer"
+                  },
+                  "chords": {
+                    "description": "Write the chord voicings (default true).",
+                    "type": "boolean"
+                  },
+                  "humanise": {
+                    "description": "Timing and velocity spread (default 0).",
+                    "maximum": 1.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "pattern": {
+                    "description": "Playing pattern from theory.vocabulary (default block).",
+                    "type": "string"
+                  },
+                  "top": {
+                    "description": "Double the top voice an octave up (default false).",
+                    "type": "boolean"
+                  },
+                  "velocity": {
+                    "description": "Velocity 1-127 (default 100).",
+                    "maximum": 127,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [],
+                "type": "object"
+              },
+              "slot": {
+                "description": "0-based clip slot (scene row) on the track.",
+                "maximum": 255,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "track": {
+                "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                "oneOf": [
+                  {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "track",
+              "slot"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "key"
+        ],
+        "type": "object"
+      },
+      "since": "0.15.0",
+      "summary": "Find chords for the melody in a MIDI slot, in a key and a generator style (theory.vocabulary): one chord per harmonic-rhythm slot, chosen so the melody's strong notes are chord tones. fit 0 follows the style's habits, 1 the melody. Returns the chords; with write_to also writes them into a slot (performed like clips.write_progression). Undoable.",
+      "title": "Harmonize Melody"
+    },
+    {
+      "domain": "theory",
+      "effect": "read",
+      "example": {
+        "resolution_beats": 2.0,
+        "slot": 0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "theory.analyze",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "description": "Mode (default major): major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant.",
+                "type": "string"
+              },
+              "root": {
+                "description": "Tonic: C, C#, Db, D … B.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root"
+            ],
+            "type": "object"
+          },
+          "resolution_beats": {
+            "description": "Shortest chord in beats.",
+            "maximum": 64.0,
+            "minimum": 0.25,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.3.0",
+      "summary": "The chords a MIDI clip's notes spell, with symbols and numerals, one per resolution_beats (default a bar); the key is estimated from the notes unless given. Use it to understand a user's part before writing around it.",
+      "title": "Analyze Clip Harmony"
+    },
+    {
+      "domain": "theory",
+      "effect": "read",
+      "example": {
+        "limit": 10,
+        "query": "neo soul"
+      },
+      "idempotent": true,
+      "name": "theory.library",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "description": "Most entries returned (default 40).",
+            "maximum": 240,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "description": "Words that must all match, e.g. 'jazz turnaround'.",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Search the 240 named progressions (pop, rock, jazz, soul, blues, gospel, classical, modal, electronic, film, world, dark…). Pass a name to theory.progression or clips.write_progression as 'library'.",
+      "title": "Progression Library"
+    },
+    {
+      "domain": "theory",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "theory.vocabulary",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.2.0",
+      "summary": "Every name the theory methods accept: modes, generator styles, playing patterns, library categories.",
+      "title": "Theory Vocabulary"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "arrangement.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "The song on the timeline: its length, whether the arrangement or the session is playing, the loop region, the markers (sections) and every track's clips with start and length in beats.",
+      "title": "Arrangement"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "edit",
+      "example": {
+        "sections": [
+          {
+            "bars": 8,
+            "name": "Intro",
+            "scene": 0
+          },
+          {
+            "bars": 16,
+            "name": "Verse",
+            "scene": 1
+          },
+          {
+            "bars": 16,
+            "name": "Drop",
+            "scene": 2
+          }
+        ]
+      },
+      "idempotent": false,
+      "name": "arrangement.build_song",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "clear_existing": {
+            "description": "Remove timeline clips from start_beat on first.",
+            "type": "boolean"
+          },
+          "markers": {
+            "description": "Add a marker per section (default true).",
+            "type": "boolean"
+          },
+          "sections": {
+            "description": "Sections in order.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "bars": {
+                  "description": "Length in bars.",
+                  "maximum": 1024.0,
+                  "minimum": 0.25,
+                  "type": "number"
+                },
+                "name": {
+                  "description": "Marker name (default: the scene's).",
+                  "type": "string"
+                },
+                "scene": {
+                  "description": "Scene row.",
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "scene",
+                "bars"
+              ],
+              "type": "object"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "start_beat": {
+            "description": "Where the song starts (default 0).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "sections"
+        ],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Lay a song out on the timeline from session scenes: each section plays one scene row for a number of bars (e.g. intro 8, verse 16, drop 16, outro 8), every MIDI track's clip in that row copied and repeated to fill it, a marker per section; TOMNIC patterns go on as their notes. Audio tracks are reported as skipped. Refuses if the range already holds clips unless clear_existing. One undo step. Then arrangement.play.",
+      "title": "Build Song"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "edit",
+      "example": {
+        "length_beats": 16.0,
+        "slot": 0,
+        "start_beat": 32.0,
+        "track": 0
+      },
+      "idempotent": false,
+      "name": "arrangement.place_clip",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "length_beats": {
+            "description": "Length (default one loop).",
+            "maximum": 4096.0,
+            "minimum": 0.25,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "start_beat": {
+            "description": "Start on the timeline.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "start_beat"
+        ],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Copy one session clip onto its track's timeline at start_beat; length_beats longer than the clip repeats it. MIDI tracks. Undoable.",
+      "title": "Place Clip"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "destructive",
+      "example": {
+        "start_beat": 64.0
+      },
+      "idempotent": true,
+      "name": "arrangement.clear",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "end_beat": {
+            "description": "Before (default: the end).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "start_beat": {
+            "description": "From (default 0).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Remove timeline clips starting inside a range (default: all), on one track or all. Undoable.",
+      "title": "Clear Timeline"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "edit",
+      "example": {
+        "clip": 0,
+        "length_beats": 32.0,
+        "muted": false,
+        "track": 1
+      },
+      "idempotent": true,
+      "name": "arrangement.edit_clip",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "clip": {
+            "description": "Timeline clip index on the track, from arrangement.get.",
+            "maximum": 4095,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "gain_db": {
+            "description": "Clip gain in dB.",
+            "maximum": 12.0,
+            "minimum": -60.0,
+            "type": "number"
+          },
+          "length_beats": {
+            "description": "New length.",
+            "maximum": 16384.0,
+            "minimum": 0.25,
+            "type": "number"
+          },
+          "muted": {
+            "description": "Silence the clip without removing it.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Clip name.",
+            "type": "string"
+          },
+          "start_beat": {
+            "description": "Move the clip to start here.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "clip"
+        ],
+        "type": "object"
+      },
+      "since": "0.13.0",
+      "summary": "Change one timeline clip (index from arrangement.get): move it, change its length (MIDI grows or shrinks, audio only shrinks), mute it, rename it, set its gain. Fields left out stay. E.g. mute the bass in the second half of a drop after copying it there. Undoable.",
+      "title": "Edit Timeline Clip"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "edit",
+      "example": {
+        "clip": 1,
+        "to_beat": 160.0,
+        "track": 0
+      },
+      "idempotent": false,
+      "name": "arrangement.copy_clip",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "clip": {
+            "description": "Timeline clip index on the track, from arrangement.get.",
+            "maximum": 4095,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "to_beat": {
+            "description": "Where the copy starts.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "to_track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "clip",
+          "to_beat"
+        ],
+        "type": "object"
+      },
+      "since": "0.13.0",
+      "summary": "Copy one timeline clip to another beat, on the same track or another one (to_track; MIDI clips go to MIDI tracks). The copy is independent: edit or mute it on its own to make a variation. Undoable.",
+      "title": "Copy Timeline Clip"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "destructive",
+      "example": {
+        "clip": 2,
+        "track": 0
+      },
+      "idempotent": false,
+      "name": "arrangement.remove_clip",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "clip": {
+            "description": "Timeline clip index on the track, from arrangement.get.",
+            "maximum": 4095,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "clip"
+        ],
+        "type": "object"
+      },
+      "since": "0.13.0",
+      "summary": "Delete one timeline clip (index from arrangement.get; later clips on the track move down one index). Undoable.",
+      "title": "Remove Timeline Clip"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "edit",
+      "example": {
+        "end_beat": 32.0,
+        "start_beat": 0.0
+      },
+      "idempotent": true,
+      "name": "arrangement.set_loop",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "description": "Loop on (default true).",
+            "type": "boolean"
+          },
+          "end_beat": {
+            "description": "Loop end.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "start_beat": {
+            "description": "Loop start.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "start_beat",
+          "end_beat"
+        ],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Set and enable (or disable) the arrangement loop region in beats. Undoable.",
+      "title": "Set Loop"
+    },
+    {
+      "domain": "arrangement",
+      "effect": "control",
+      "example": {
+        "from_beat": 0.0
+      },
+      "idempotent": true,
+      "name": "arrangement.play",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "from_beat": {
+            "description": "Start (default 0).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Play the timeline from a beat: every track follows the arrangement again (like Back to Arrangement), the playhead moves, playback starts.",
+      "title": "Play Arrangement"
+    },
+    {
+      "domain": "markers",
+      "effect": "edit",
+      "example": {
+        "beat": 32.0,
+        "name": "Chorus"
+      },
+      "idempotent": false,
+      "name": "markers.add",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "beat": {
+            "description": "Position.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "color": {
+            "description": "#rrggbb.",
+            "type": "string"
+          },
+          "end_beat": {
+            "description": "End of the section region.",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "name": {
+            "description": "Label, e.g. 'Chorus'.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "beat",
+          "name"
+        ],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Add a marker (or, with end_beat, a section region) to the timeline. Undoable.",
+      "title": "Add Marker"
+    },
+    {
+      "domain": "markers",
+      "effect": "destructive",
+      "example": {
+        "index": 0
+      },
+      "idempotent": false,
+      "name": "markers.remove",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "description": "Marker index.",
+            "maximum": 1023,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index"
+        ],
+        "type": "object"
+      },
+      "since": "0.7.0",
+      "summary": "Remove a marker by its index from arrangement.get. Undoable.",
+      "title": "Remove Marker"
+    },
+    {
+      "domain": "automation",
+      "effect": "read",
+      "example": {
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "automation.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.12.0",
+      "summary": "The automation lanes of a track on the arrangement timeline: what each drives (its key), how many segments and points, the automated span in beats.",
+      "title": "List Automation"
+    },
+    {
+      "domain": "automation",
+      "effect": "edit",
+      "example": {
+        "param": "volume",
+        "points": [
+          {
+            "beat": 0,
+            "value": -30
+          },
+          {
+            "beat": 32,
+            "value": 0
+          }
+        ],
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "automation.write",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "curve": {
+            "description": "How each point moves to the next (default linear).",
+            "enum": [
+              "linear",
+              "smooth",
+              "step",
+              "sine"
+            ],
+            "type": "string"
+          },
+          "param": {
+            "description": "What to automate: \"volume\" (dB), \"pan\" (-1..1), or a params.list key (instrument:<id>, fx:<slot>:<index>) in that parameter's range.",
+            "type": "string"
+          },
+          "points": {
+            "description": "Breakpoints in time order.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "beat": {
+                  "description": "Song position in beats.",
+                  "maximum": 1000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "value": {
+                  "description": "Value in the parameter's unit.",
+                  "maximum": 1000000.0,
+                  "minimum": -1000000.0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "beat",
+                "value"
+              ],
+              "type": "object"
+            },
+            "maxItems": 1024,
+            "type": "array"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "param",
+          "points"
+        ],
+        "type": "object"
+      },
+      "since": "0.12.0",
+      "summary": "Automate a track's volume, pan or any parameter over the song: points at song beats with values in the parameter's own unit; the lane is created if needed and its automation replaced. E.g. a filter sweep through a break: {param: \"instrument:16\", points: [{beat: 96, value: 400}, {beat: 128, value: 8000}]}. Plays when the arrangement plays. Undoable.",
+      "title": "Write Automation"
+    },
+    {
+      "domain": "automation",
+      "effect": "destructive",
+      "example": {
+        "param": "pan",
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "automation.clear",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "param": {
+            "description": "What to automate: \"volume\" (dB), \"pan\" (-1..1), or a params.list key (instrument:<id>, fx:<slot>:<index>) in that parameter's range.",
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "param"
+        ],
+        "type": "object"
+      },
+      "since": "0.12.0",
+      "summary": "Remove the automation of one parameter on a track (the lane stays, empty). Undoable.",
+      "title": "Clear Automation"
+    },
+    {
+      "domain": "audio",
+      "effect": "edit",
+      "example": {
+        "path": "C:/Samples/break.wav",
+        "slot": 0,
+        "track": 5
+      },
+      "idempotent": false,
+      "name": "audio.import",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Absolute path of the audio file.",
+            "type": "string"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "path"
+        ],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "Load an audio file (WAV, AIFF, FLAC, MP3, OGG) into a session slot of an audio track, as dropping it from the browser does; arrangement.place_clip then puts it on the timeline. Needs file access, granted in Omni's Settings (AI Create). Undoable.",
+      "title": "Import Audio"
+    },
+    {
+      "domain": "audio",
+      "effect": "read",
+      "example": {
+        "mode": "bass",
+        "slot": 0,
+        "track": 5
+      },
+      "idempotent": true,
+      "name": "audio.transcribe",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "min_ms": {
+            "description": "Shortest note in ms.",
+            "maximum": 500.0,
+            "minimum": 20.0,
+            "type": "number"
+          },
+          "mode": {
+            "description": "What to hear (default poly).",
+            "enum": [
+              "poly",
+              "melody",
+              "bass"
+            ],
+            "type": "string"
+          },
+          "path": {
+            "description": "Absolute path of an audio file.",
+            "type": "string"
+          },
+          "sensitivity": {
+            "description": "How readily a note is heard.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sustain": {
+            "description": "How long notes hold.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "Audio to notes with Basic Pitch: a file (path) or the audio in a session slot (track + slot). mode poly (chords), melody (one line) or bass. Returns a job; its result has the notes in beats at the project tempo, ready for clips.write_midi, and the detected length. File paths need file access (Settings, AI Create).",
+      "title": "Transcribe Audio"
+    },
+    {
+      "domain": "audio",
+      "effect": "control",
+      "example": {
+        "folder": "C:/Music/stems",
+        "path": "C:/Music/mix.wav"
+      },
+      "idempotent": false,
+      "name": "audio.split_stems",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "folder": {
+            "description": "Absolute path of the folder for the stems.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Absolute path of the WAV to split.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "folder"
+        ],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "Split a WAV mix into vocals, drums, bass and other with Demucs (the model downloads on first use). Returns a job; its result has the four file paths, which audio.import can load. Needs file access (Settings, AI Create).",
+      "title": "Split Stems"
+    },
+    {
+      "domain": "sampler",
+      "effect": "read",
+      "example": {
+        "slot": 0,
+        "track": 5
+      },
+      "idempotent": true,
+      "name": "sampler.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "The sampler of an audio clip: file, length, playback mode, root note, transpose, envelope and its slices (index, the note that plays it, start and end in seconds).",
+      "title": "Get Sampler"
+    },
+    {
+      "domain": "sampler",
+      "effect": "edit",
+      "example": {
+        "playback_mode": "gate",
+        "release_ms": 80,
+        "slot": 0,
+        "track": 5
+      },
+      "idempotent": true,
+      "name": "sampler.set",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "attack_ms": {
+            "description": "Attack.",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "decay_ms": {
+            "description": "Decay.",
+            "maximum": 30000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "playback_mode": {
+            "description": "How the clip plays.",
+            "enum": [
+              "one_shot",
+              "loop",
+              "slice",
+              "gate",
+              "granular",
+              "warp"
+            ],
+            "type": "string"
+          },
+          "release_ms": {
+            "description": "Release.",
+            "maximum": 30000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "reverse": {
+            "description": "Play backwards.",
+            "type": "boolean"
+          },
+          "root_note": {
+            "description": "Note that plays the sample unshifted.",
+            "maximum": 127,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sustain": {
+            "description": "Sustain level.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "transpose": {
+            "description": "Semitones.",
+            "maximum": 48,
+            "minimum": -48,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "Change how an audio clip's sampler plays (fields left out stay): playback_mode one_shot, loop, slice, gate, granular, warp; root note, transpose in semitones, reverse, envelope (attack/decay/release ms, sustain 0-1). Undoable.",
+      "title": "Set Sampler"
+    },
+    {
+      "domain": "sampler",
+      "effect": "edit",
+      "example": {
+        "mode": "transients",
+        "sensitivity": 0.6,
+        "slot": 0,
+        "track": 5
+      },
+      "idempotent": true,
+      "name": "sampler.slice",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "description": "equal: number of slices.",
+            "maximum": 128,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "division": {
+            "description": "beats: slices per beat, 1 = quarters, 2 = eighths, 4 = sixteenths.",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "mode": {
+            "description": "How to cut (default transients).",
+            "enum": [
+              "transients",
+              "equal",
+              "beats"
+            ],
+            "type": "string"
+          },
+          "sensitivity": {
+            "description": "transients: how readily a hit starts a slice.",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "Cut an audio clip into slices, as the sample editor's slice detection does: on transients (sensitivity), into equal parts (count) or on beats (division per beat at the clip's tempo). A clip holds at most 92 slices (notes 36-127): slice a short loop, not a whole song. Switches the clip to slice mode: each slice gets a note, so clips.write_slices can play patterns and melodies from them. Returns the slices. Undoable.",
+      "title": "Slice Sample"
+    },
+    {
+      "domain": "clips",
+      "effect": "edit",
+      "example": {
+        "slot": 0,
+        "steps": [
+          {
+            "duration": 0.5,
+            "slice": 0,
+            "start": 0
+          },
+          {
+            "duration": 0.5,
+            "pitch": 3,
+            "slice": 3,
+            "start": 0.5
+          },
+          {
+            "duration": 1,
+            "pitch": 7,
+            "slice": 3,
+            "start": 1
+          }
+        ],
+        "track": 5
+      },
+      "idempotent": true,
+      "name": "clips.write_slices",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "length_beats": {
+            "description": "Loop length in beats.",
+            "maximum": 1024.0,
+            "minimum": 0.25,
+            "type": "number"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "steps": {
+            "description": "Slice hits.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "duration": {
+                  "description": "Length in beats.",
+                  "maximum": 1024.0,
+                  "minimum": 0.001,
+                  "type": "number"
+                },
+                "pitch": {
+                  "description": "Semitones up or down.",
+                  "maximum": 24,
+                  "minimum": -24,
+                  "type": "integer"
+                },
+                "slice": {
+                  "description": "Slice index from sampler.get.",
+                  "maximum": 1023,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "start": {
+                  "description": "Beats from the clip start.",
+                  "maximum": 1024.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                "velocity": {
+                  "description": "1-127 (default 100).",
+                  "maximum": 127,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "slice",
+                "start",
+                "duration"
+              ],
+              "type": "object"
+            },
+            "maxItems": 4096,
+            "type": "array"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "since": "0.19.0",
+      "summary": "Write which slices of a sliced audio clip play when (replacing its notes): steps with a slice index, start and length in beats, velocity, and pitch in semitones, so one slice can play a melody (a vocal chop, a stab) and many slices a rearranged break. Undoable.",
+      "title": "Play Slices"
+    },
+    {
+      "domain": "devices",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "devices.types",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Omni's builtin effects that devices.add can insert, with their family: EQ, Filter, Compressor, Limiter, MultibandDynamics, Noise Gate, Transient Shaper, Saturator, Delay, Reverb, Chorus, Phaser and creative ones.",
+      "title": "Device Types"
+    },
+    {
+      "domain": "devices",
+      "effect": "read",
+      "example": {
+        "chain": {
+          "track": 0
+        }
+      },
+      "idempotent": true,
+      "name": "devices.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "description": "Effect chain: {\"track\": <id or index>}, {\"return_bus\": <index>} or \"master\".",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "return_bus": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "return_bus"
+                ],
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "chain"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "The effects of a chain in signal order: a track's inserts ({\"track\": id}), a return bus ({\"return_bus\": n}) or \"master\". Each with slot, name, kind (builtin/plugin/script), bypass and parameter count.",
+      "title": "List Devices"
+    },
+    {
+      "domain": "devices",
+      "effect": "read",
+      "example": {
+        "chain": "master",
+        "slot": 0
+      },
+      "idempotent": true,
+      "name": "devices.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "description": "Effect chain: {\"track\": <id or index>}, {\"return_bus\": <index>} or \"master\".",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "return_bus": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "return_bus"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "slot": {
+            "description": "0-based position in the chain (signal order).",
+            "maximum": 63,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chain",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Every parameter of a builtin effect with its current value, range, default, unit (dB, Hz, ms, %) and group; a choice lists its options (index = value, e.g. Shape 4 = HighPass). Values are in those units, not 0..1.",
+      "title": "Read Device"
+    },
+    {
+      "domain": "devices",
+      "effect": "edit",
+      "example": {
+        "chain": {
+          "track": 0
+        },
+        "device": "EQ"
+      },
+      "idempotent": false,
+      "name": "devices.add",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "description": "Effect chain: {\"track\": <id or index>}, {\"return_bus\": <index>} or \"master\".",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "return_bus": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "return_bus"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "device": {
+            "description": "Effect name from devices.types, e.g. Compressor.",
+            "type": "string"
+          },
+          "position": {
+            "description": "0-based position in the chain (signal order).",
+            "maximum": 63,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chain",
+          "device"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Insert a builtin effect (a name from devices.types) into a chain, at the end or at 'position'. It starts at its default settings; shape it with devices.set_params. Returns the chain. Undoable.",
+      "title": "Add Device"
+    },
+    {
+      "domain": "devices",
+      "effect": "destructive",
+      "example": {
+        "chain": {
+          "track": 0
+        },
+        "slot": 1
+      },
+      "idempotent": false,
+      "name": "devices.remove",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "description": "Effect chain: {\"track\": <id or index>}, {\"return_bus\": <index>} or \"master\".",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "return_bus": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "return_bus"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "slot": {
+            "description": "0-based position in the chain (signal order).",
+            "maximum": 63,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chain",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Remove an effect from a chain; later slots move up. Undoable.",
+      "title": "Remove Device"
+    },
+    {
+      "domain": "devices",
+      "effect": "edit",
+      "example": {
+        "bypassed": true,
+        "chain": "master",
+        "slot": 0
+      },
+      "idempotent": true,
+      "name": "devices.set_bypass",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bypassed": {
+            "description": "Bypass the effect.",
+            "type": "boolean"
+          },
+          "chain": {
+            "description": "Effect chain: {\"track\": <id or index>}, {\"return_bus\": <index>} or \"master\".",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "return_bus": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "return_bus"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "slot": {
+            "description": "0-based position in the chain (signal order).",
+            "maximum": 63,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chain",
+          "slot",
+          "bypassed"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Bypass (true) or enable an effect; the switch crossfades, no click. Useful to compare before / after with mix.meters. Undoable.",
+      "title": "Bypass Device"
+    },
+    {
+      "domain": "devices",
+      "effect": "edit",
+      "example": {
+        "chain": {
+          "track": 0
+        },
+        "slot": 0,
+        "values": {
+          "Ratio": 3.0,
+          "Threshold": -18.0
+        }
+      },
+      "idempotent": true,
+      "name": "devices.set_params",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "chain": {
+            "description": "Effect chain: {\"track\": <id or index>}, {\"return_bus\": <index>} or \"master\".",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "return_bus": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "return_bus"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "slot": {
+            "description": "0-based position in the chain (signal order).",
+            "maximum": 63,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Parameter name or index → value.",
+            "minProperties": 1,
+            "type": "object"
+          }
+        },
+        "required": [
+          "chain",
+          "slot",
+          "values"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Set several parameters of a builtin effect at once, by name (as devices.get lists them, case-insensitive) or index, in the parameter's own unit. All are checked against their ranges before any changes. One undo step. Returns the device with its new values.",
+      "title": "Set Device Parameters"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "midi_fx.types",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "MIDI effects a track can put in front of its instrument: transforms (Arpeggiator, Chord, Scale, Velocity, Note Length, Note Echo, Random, Ornaments, Tuplets) change the notes going through; generators (Marbles, Markov, L-System, Cellular, Thue-Morse, Recaman, Sequence, Shepard, Walks) play their own, locked to the song while a clip plays.",
+      "title": "List MIDI FX Types"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "read",
+      "example": {
+        "track": 3
+      },
+      "idempotent": true,
+      "name": "midi_fx.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "The MIDI FX chain of a track, in processing order.",
+      "title": "List MIDI FX"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "read",
+      "example": {
+        "slot": 0,
+        "track": 3
+      },
+      "idempotent": true,
+      "name": "midi_fx.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "Every parameter of one MIDI FX slot: name, value, range, default.",
+      "title": "Get MIDI FX"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "edit",
+      "example": {
+        "device": "Arpeggiator",
+        "track": 3
+      },
+      "idempotent": false,
+      "name": "midi_fx.add",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "description": "A name from midi_fx.types, e.g. Arpeggiator.",
+            "type": "string"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "device"
+        ],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "Append a MIDI effect from midi_fx.types to a track's MIDI FX chain, with its default settings. Undoable.",
+      "title": "Add MIDI FX"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "destructive",
+      "example": {
+        "slot": 0,
+        "track": 3
+      },
+      "idempotent": false,
+      "name": "midi_fx.remove",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "Remove one MIDI FX slot; later slots move down. Undoable.",
+      "title": "Remove MIDI FX"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "edit",
+      "example": {
+        "slot": 0,
+        "track": 3,
+        "values": {
+          "Rate": 4.0
+        }
+      },
+      "idempotent": true,
+      "name": "midi_fx.set_params",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Parameter name or index -> value.",
+            "minProperties": 1,
+            "type": "object"
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "values"
+        ],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "Set parameters of one MIDI FX slot by name (or index), values in each parameter's range from midi_fx.get. Undoable, one step per call.",
+      "title": "Set MIDI FX Parameters"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "edit",
+      "example": {
+        "bars": 8,
+        "input_slot": 0,
+        "slot": 0,
+        "to_slot": 1,
+        "track": 3
+      },
+      "idempotent": true,
+      "name": "midi_fx.render",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bars": {
+            "description": "Bars to render (default 4).",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "bypass": {
+            "description": "Bypass the effect afterwards (default true).",
+            "type": "boolean"
+          },
+          "input_slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "slot": {
+            "description": "The MIDI FX slot.",
+            "maximum": 63,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "to_slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "to_slot"
+        ],
+        "type": "object"
+      },
+      "since": "0.21.0",
+      "summary": "Play one MIDI FX slot offline over some bars and write what it played into a session slot as notes: a Markov / L-System / Marbles line becomes an editable clip, an Arpeggiator over the chord in input_slot becomes the arpeggio. The effect is bypassed afterwards (bypass false keeps it on). Undoable.",
+      "title": "Render MIDI FX"
+    },
+    {
+      "domain": "midi_fx",
+      "effect": "edit",
+      "example": {
+        "bypassed": true,
+        "slot": 0,
+        "track": 3
+      },
+      "idempotent": true,
+      "name": "midi_fx.set_bypass",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bypassed": {
+            "description": "true = notes pass unchanged.",
+            "type": "boolean"
+          },
+          "slot": {
+            "description": "0-based clip slot (scene row) on the track.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "slot",
+          "bypassed"
+        ],
+        "type": "object"
+      },
+      "since": "0.16.0",
+      "summary": "Bypass (or re-enable) one MIDI FX slot. Undoable.",
+      "title": "Bypass MIDI FX"
+    },
+    {
+      "domain": "mixer",
+      "effect": "edit",
+      "example": {
+        "name": "Reverb"
+      },
+      "idempotent": false,
+      "name": "mixer.add_return",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Name (default 'Return N').",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.11.0",
+      "summary": "Add a return bus (e.g. 'Reverb', 'Delay'): put an effect on it with devices.add ({\"return_bus\": n}, usually at 100% mix) and feed it from tracks with mixer.set_send. Returns the mixer. Undoable.",
+      "title": "Add Return Bus"
+    },
+    {
+      "domain": "mixer",
+      "effect": "destructive",
+      "example": {
+        "bus": 0
+      },
+      "idempotent": false,
+      "name": "mixer.remove_return",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bus": {
+            "description": "Return bus index.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bus"
+        ],
+        "type": "object"
+      },
+      "since": "0.11.0",
+      "summary": "Delete a return bus with its effects and every track's send to it. Later buses move down one index. Undoable (the sends come back too).",
+      "title": "Remove Return Bus"
+    },
+    {
+      "domain": "mixer",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "mixer.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Master fader (dB) and balance, and the return buses (index, name, fader, insert count). Track faders and sends are in tracks.list.",
+      "title": "Mixer State"
+    },
+    {
+      "domain": "mixer",
+      "effect": "edit",
+      "example": {
+        "bus": 0,
+        "level_db": -12.0,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "mixer.set_send",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bus": {
+            "description": "Return bus index from mixer.get.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "level_db": {
+            "description": "Send level in dB.",
+            "maximum": 6.0,
+            "minimum": -200.0,
+            "type": "number"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "bus",
+          "level_db"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Send level from a track to a return bus in dB (up to +6; -120 or lower = off), e.g. to put a part into the reverb on a return. Undoable.",
+      "title": "Set Send"
+    },
+    {
+      "domain": "mixer",
+      "effect": "edit",
+      "example": {
+        "volume_db": 0.0
+      },
+      "idempotent": true,
+      "name": "mixer.set_master",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "pan": {
+            "description": "Balance -1 left .. +1 right.",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "type": "number"
+          },
+          "volume_db": {
+            "description": "Master fader in dB.",
+            "maximum": 6.0,
+            "minimum": -200.0,
+            "type": "number"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Master fader in dB (up to about +6) and balance (-1..1). Prefer leaving the master at 0 dB and balancing the tracks. Undoable.",
+      "title": "Set Master"
+    },
+    {
+      "domain": "mixer",
+      "effect": "edit",
+      "example": {
+        "bus": 0,
+        "volume_db": -3.0
+      },
+      "idempotent": true,
+      "name": "mixer.set_return",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bus": {
+            "description": "Return bus index.",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "volume_db": {
+            "description": "Fader in dB.",
+            "maximum": 6.0,
+            "minimum": -200.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "bus",
+          "volume_db"
+        ],
+        "type": "object"
+      },
+      "since": "0.4.0",
+      "summary": "Fader of a return bus in dB. Undoable.",
+      "title": "Set Return Level"
+    },
+    {
+      "domain": "params",
+      "effect": "read",
+      "example": {
+        "filter": "cutoff",
+        "limit": 20,
+        "track": 0
+      },
+      "idempotent": true,
+      "name": "params.list",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "filter": {
+            "description": "Words that must all match name, group or device.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Most returned (default 100).",
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Skip this many matches.",
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ],
+        "type": "object"
+      },
+      "since": "0.9.0",
+      "summary": "Every parameter of a track: its instrument (builtin synth or VST3 / CLAP plugin) and every insert effect, plugins included, with key, name, device, group, range, default and current value. Plugins have hundreds: narrow with filter (words that must all appear, e.g. 'filter cutoff') and page with offset / limit (default 100).",
+      "title": "List Parameters"
+    },
+    {
+      "domain": "params",
+      "effect": "edit",
+      "example": {
+        "track": 0,
+        "values": {
+          "fx:0:3": 0.75,
+          "instrument:12": 0.4
+        }
+      },
+      "idempotent": true,
+      "name": "params.set",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "track": {
+            "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Parameter key → value.",
+            "minProperties": 1,
+            "type": "object"
+          }
+        },
+        "required": [
+          "track",
+          "values"
+        ],
+        "type": "object"
+      },
+      "since": "0.9.0",
+      "summary": "Set parameters of a track by their params.list keys (instrument:<id>, fx:<slot>:<index>), each in its own range (plugins are usually 0-1). All are checked before any changes; one undo step. For builtin effects devices.set_params by name is simpler.",
+      "title": "Set Parameters"
+    },
+    {
+      "domain": "mix",
+      "effect": "read",
+      "example": {
+        "tracks": [
+          0,
+          1
+        ]
+      },
+      "idempotent": true,
+      "name": "mix.meters",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "tracks": {
+            "description": "Only these tracks (default: all).",
+            "items": {
+              "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+              "oneOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ]
+            },
+            "maxItems": 1024,
+            "type": "array"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Live levels, as the mixer meters show them: per track peak/RMS (dBFS) and EBU R128 loudness (momentary, short-term, integrated LUFS, true peak dBTP); on the master also stereo correlation and loudness range (LU). Meters only move while audio plays: start the transport, wait a few seconds, then read. null = silence or not measured yet.",
+      "title": "Read Meters"
+    },
+    {
+      "domain": "analysis",
+      "effect": "control",
+      "example": {
+        "seconds": 8,
+        "source": "master"
+      },
+      "idempotent": false,
+      "name": "analysis.capture",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "seconds": {
+            "description": "Length to capture.",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "type": "number"
+          },
+          "source": {
+            "description": "What to listen to: \"master\" or {\"track\": <id or index>}.",
+            "oneOf": [
+              {
+                "enum": [
+                  "master"
+                ],
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "track": {
+                    "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+                    "oneOf": [
+                      {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "track"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "start_transport": {
+            "description": "Start playback if stopped (default true).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "type": "object"
+      },
+      "since": "0.5.0",
+      "summary": "Record what the master or one track plays for a few seconds (default 8, 1-30) and analyse it in the background: peak, true peak, RMS, crest factor, clipping, DC; LUFS integrated / short-term / momentary and loudness range, short-term per second; stereo correlation, width and mono loss; tonal balance (sub, bass, low-mid, mid, high-mid, high, air) and a 1/3-octave spectrum with per-band width. Starts playback if stopped. Returns a job id at once: call jobs.wait with it. One capture at a time.",
+      "title": "Listen"
+    },
+    {
+      "domain": "analysis",
+      "effect": "read",
+      "example": {
+        "path": "C:/Music/reference.wav"
+      },
+      "idempotent": true,
+      "name": "analysis.file",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "description": "Absolute path of the file.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "since": "0.6.0",
+      "summary": "Analyse an audio file (WAV, FLAC, MP3, OGG, AIFF) the same way as analysis.capture: a reference track to compare the mix with (analysis.compare), or an exported master to master.check. Reads at most the first 10 minutes. Returns a job: jobs.wait for it.",
+      "title": "Analyse File"
+    },
+    {
+      "domain": "analysis",
+      "effect": "read",
+      "example": {
+        "a": 1,
+        "b": 2
+      },
+      "idempotent": true,
+      "name": "analysis.compare",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "description": "Job id from the call that started it.",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "b": {
+            "description": "Job id from the call that started it.",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "a",
+          "b"
+        ],
+        "type": "object"
+      },
+      "since": "0.5.0",
+      "summary": "Where two finished captures (e.g. kick and bass, vocal and guitars) compete: band by band levels and the bands where both carry energy within a few dB of each other, strongest first. The usual cure is an EQ cut on one of them there (devices.add EQ + devices.set_params).",
+      "title": "Compare Captures"
+    },
+    {
+      "domain": "jobs",
+      "effect": "read",
+      "example": {
+        "job": 1
+      },
+      "idempotent": true,
+      "name": "jobs.get",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "job": {
+            "description": "Job id from the call that started it.",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job"
+        ],
+        "type": "object"
+      },
+      "since": "0.5.0",
+      "summary": "State (running / done / failed), progress and, once done, the result of a job started by another call.",
+      "title": "Job Status"
+    },
+    {
+      "domain": "jobs",
+      "effect": "read",
+      "example": {
+        "job": 1,
+        "timeout_seconds": 9
+      },
+      "idempotent": true,
+      "name": "jobs.wait",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "job": {
+            "description": "Job id from the call that started it.",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "description": "Longest wait.",
+            "maximum": 9.0,
+            "minimum": 0.0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "job"
+        ],
+        "type": "object"
+      },
+      "since": "0.5.0",
+      "summary": "Wait until a job finishes (at most timeout_seconds, default and limit 9) and return it as jobs.get does; call again while it is still running.",
+      "title": "Wait for Job"
+    },
+    {
+      "domain": "master",
+      "effect": "read",
+      "example": {},
+      "idempotent": true,
+      "name": "master.targets",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.6.0",
+      "summary": "Delivery targets: streaming platforms (Spotify, Apple Music, YouTube, Tidal, Amazon Music, Deezer), podcast, broadcast (EBU R128, ATSC A/85) and a club convention, each with integrated LUFS, tolerance and true-peak ceiling.",
+      "title": "Loudness Targets"
+    },
+    {
+      "domain": "master",
+      "effect": "read",
+      "example": {
+        "job": 1,
+        "target": "spotify"
+      },
+      "idempotent": true,
+      "name": "master.check",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "job": {
+            "description": "Finished capture job.",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "target": {
+            "description": "Target id from master.targets, e.g. spotify, apple_music, ebu_r128, club.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job",
+          "target"
+        ],
+        "type": "object"
+      },
+      "since": "0.6.0",
+      "summary": "Pass / fail of a finished master capture (analysis.capture of \"master\", or analysis.file of an exported mix) against a target: loudness gap in LU, true peak against the ceiling, the gain that would hit the target, and notes (short capture, clipping, over-limiting, phase).",
+      "title": "Check Against Target"
+    },
+    {
+      "domain": "master",
+      "effect": "edit",
+      "example": {
+        "job": 1,
+        "target": "spotify"
+      },
+      "idempotent": false,
+      "name": "master.build_chain",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "glue": {
+            "description": "Add the glue compressor (default true).",
+            "type": "boolean"
+          },
+          "job": {
+            "description": "Finished capture of the master.",
+            "maximum": 9223372036854775807,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "target": {
+            "description": "Target id from master.targets, e.g. spotify, apple_music, ebu_r128, club.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "type": "object"
+      },
+      "since": "0.6.0",
+      "summary": "Put a mastering chain at the end of the master: an optional glue Compressor (2:1, slow attack, soft knee) and a true-peak Limiter with its ceiling at the target's. With a capture job of the master, the compressor threshold and the limiter's input gain are set from it to approach the target loudness. Refuses if the master already has a Limiter (adjust that one with devices.set_params). One undo step. Then capture again and master.check.",
+      "title": "Build Master Chain"
+    },
+    {
+      "domain": "export",
+      "effect": "control",
+      "example": {
+        "fast": true,
+        "path": "C:/Music/mix.wav",
+        "target": "spotify"
+      },
+      "idempotent": false,
+      "name": "export.render",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bit_depth": {
+            "description": "16, 24 (default) or 32 (float).",
+            "maximum": 32,
+            "minimum": 16,
+            "type": "integer"
+          },
+          "dither": {
+            "description": "Dither when writing 16/24 bit (default: the export dialog's).",
+            "enum": [
+              "off",
+              "tpdf",
+              "pow_r1",
+              "pow_r2",
+              "pow_r3"
+            ],
+            "type": "string"
+          },
+          "end_beat": {
+            "description": "End in beats (default: the song's end).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "fast": {
+            "description": "Render offline, faster than real time (default false).",
+            "type": "boolean"
+          },
+          "overwrite": {
+            "description": "Replace existing files (default false).",
+            "type": "boolean"
+          },
+          "path": {
+            "description": "Absolute path of the .wav file to write.",
+            "type": "string"
+          },
+          "start_beat": {
+            "description": "Start in beats (default 0).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "target": {
+            "description": "Normalise to this target from master.targets while writing.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "since": "0.6.0",
+      "summary": "Render the arrangement (start_beat to end_beat, default the whole song) to a WAV file, as the Export dialog does: in real time through the audio device, or with fast offline (faster than real time, the same mix), optionally normalised to a loudness target. Returns a job: jobs.wait until done; the result has the path and an analysis of the written file. Writes only absolute .wav paths and does not overwrite unless asked. Session clips play only if recorded into the arrangement.",
+      "title": "Export Mix"
+    },
+    {
+      "domain": "export",
+      "effect": "control",
+      "example": {
+        "folder": "C:/Music/stems",
+        "tracks": [
+          0,
+          1,
+          2
+        ]
+      },
+      "idempotent": false,
+      "name": "export.stems",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "bit_depth": {
+            "description": "16, 24 (default) or 32 (float).",
+            "maximum": 32,
+            "minimum": 16,
+            "type": "integer"
+          },
+          "dither": {
+            "description": "Dither when writing 16/24 bit (default: the export dialog's).",
+            "enum": [
+              "off",
+              "tpdf",
+              "pow_r1",
+              "pow_r2",
+              "pow_r3"
+            ],
+            "type": "string"
+          },
+          "end_beat": {
+            "description": "End in beats (default: the song's end).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "folder": {
+            "description": "Absolute path of an existing folder for the stems.",
+            "type": "string"
+          },
+          "overwrite": {
+            "description": "Replace existing files (default false).",
+            "type": "boolean"
+          },
+          "start_beat": {
+            "description": "Start in beats (default 0).",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "through_master": {
+            "description": "Keep the master chain on each stem (default false).",
+            "type": "boolean"
+          },
+          "tracks": {
+            "description": "Tracks to render (default: every non-group track).",
+            "items": {
+              "description": "Track id (UUID string from tracks.list, stable) or 0-based index (shifts when tracks are added or moved).",
+              "oneOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ]
+            },
+            "maxItems": 256,
+            "type": "array"
+          }
+        },
+        "required": [
+          "folder"
+        ],
+        "type": "object"
+      },
+      "since": "0.17.0",
+      "summary": "Render one WAV per track (all audible tracks, or the ones listed) into a folder, offline and faster than real time: each stem is its track soloed, with its sends' returns, without the master chain unless through_master. Files are named '<NN> <track>.wav'. Returns a job whose result lists the files.",
+      "title": "Export Stems"
+    },
+    {
+      "domain": "edit",
+      "effect": "history",
+      "example": {},
+      "idempotent": false,
+      "name": "edit.undo",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Undo the newest step in Omni's history (the user's or yours; every edit call of this API is one step labelled 'API: ...'). Returns what was undone.",
+      "title": "Undo"
+    },
+    {
+      "domain": "edit",
+      "effect": "history",
+      "example": {},
+      "idempotent": false,
+      "name": "edit.redo",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "since": "0.1.0",
+      "summary": "Redo the step undone last. Returns what was redone.",
+      "title": "Redo"
+    }
+  ],
+  "protocol": "omnidaw-api",
+  "units": {
+    "level": "dB / dBFS, null = silence",
+    "loudness": "LUFS (EBU R128), true peak dBTP",
+    "pan": "-1 left .. +1 right",
+    "pitch": "MIDI note number, 60 = middle C",
+    "time": "beats (quarter notes)"
+  }
+}

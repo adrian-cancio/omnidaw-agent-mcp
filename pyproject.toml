@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omnidaw-agent-mcp"
+version = "0.1.0"
+description = "Unofficial policy-enforced local OMNi MCP integration"
+requires-python = ">=3.12"
+dependencies = ["mcp>=2.3,<3", "jsonschema>=4.26,<5"]
+license = "MIT"
+
+[project.optional-dependencies]
+dev = ["pytest>=9", "pytest-asyncio>=1", "ruff>=0.17", "build>=1"]
+
+[project.scripts]
+omnidaw-agent = "omnidaw_agent.server:main"
+
+[tool.setuptools.package-data]
+omnidaw_agent = ["catalog.json"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
