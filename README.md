@@ -70,7 +70,7 @@ Add the following to your MCP client configuration (`opencode.jsonc`, `claude_de
       "args": [
         "--allow-write",
         "--output-root",
-        "/home/cancio/Music/omnidaw-exports"
+        "/home/user/Music/omnidaw-exports"
       ]
     }
   }
@@ -142,7 +142,7 @@ For agents operating remotely (e.g. on a separate VPS):
        engine._capture_count = 0
    ```
 
-**Evidence**: See `/home/cancio/.hermes/cache/scratch/omni-stability-analysis.md` for full discriminant experiment matrix and reproduction details.
+**Evidence**: Documented in test run logs and stability analysis reports included with bug report submissions.
 
 ## Verification & Testing
 
