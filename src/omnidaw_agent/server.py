@@ -40,7 +40,7 @@ TOOLS = {
     "agent_measure": ("Measure master or track, propose mastering chain, no perceptual claims", schema({"target": STRING, "seconds": {"type": "number", "minimum": 1, "maximum": 30}, "source": {"oneOf": [STRING, {"type": "object"}]}})),
     "agent_export_preview": ("Preview render/stems over an explicit beat range with bounded job waiting; no guarantee of audible content", schema({"path": STRING, "folder": STRING, "start_beat": {"type": "number", "minimum": 0, "maximum": 1000000}, "end_beat": {"type": "number", "minimum": 0, "maximum": 1000000}}, ["end_beat"])),
     "agent_wait": ("Bounded job waiting with progress, no restart on timeout", schema({"job": {"type": "integer", "minimum": 1}, "deadline": {"type": "number", "exclusiveMinimum": 0, "maximum": 600}}, ["job"])),
-    "agent_verify_wav": ("Read actual output PCM; check duration/rate/channels and non-silence", schema({"path": STRING, "expected_seconds": NUMBER, "sample_rate": {"type": "integer"}, "channels": {"type": "integer", "minimum": 1}}, ["path"])),
+    "agent_verify_wav": ("Read actual output PCM; check duration/rate/channels and non-silence (peak below silence_floor_dbfs, default -80, is rejected as silent or dither-only)", schema({"path": STRING, "expected_seconds": NUMBER, "sample_rate": {"type": "integer"}, "channels": {"type": "integer", "minimum": 1}, "silence_floor_dbfs": NUMBER}, ["path"])),
 }
 
 

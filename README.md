@@ -96,28 +96,28 @@ For agents operating remotely (e.g. on a separate VPS):
 - `agent_arrange_timeline`: Place a batch of clips (`track`, `slot`, `start_beat`, `length_beats`) and optional markers in one preview plan.
 - `agent_measure`: Measure master/track loudness, tonal balance, and clipping, proposing mastering chains without perceptual claims.
 - `agent_export_preview`: Preview mixes or stems to WAV files with bounded job tracking. An explicit finite `end_beat` greater than `start_beat` (default 0) is required; the workflow never guesses song length. Failed or unavailable arrangement inspection produces no plan. Session-mode preparation selects the arrangement using `arrangement.play` (which starts playback) then stops it; this does not place session clips on the timeline or guarantee non-silent output. Inspect the range/content and verify the written audio separately.
-- `agent_verify_wav`: Verify that exported audio contains valid, non-silent integer PCM with matching sample rate and duration.
+- `agent_verify_wav`: Verify that exported audio contains valid integer PCM with matching sample rate and duration. Audio whose peak is below `silence_floor_dbfs` (default -80 dBFS) is rejected as silent or dither-only. The result includes `peak_dbfs` and `rms_dbfs`.
 
 ## Known Limitations
 
-### OMNi audio-stream failure on Linux (upstream issue, not fixed here)
+These are limits of the current OMNi API and of this server's safety model, not guarantees about audible results.
 
-**Observed behaviour**: during playback, OMNi's audio output stream can die. The OMNi log then shows `alsa::poll() returned POLLERR` hundreds of thousands of times, followed by `Audio stream died - auto-restarting engine`. After that, audio output stays silent, including fast offline renders: they produce a structurally valid WAV whose content is silent. In some real sessions the host process then disappeared.
+- **No MIDI file import or session open.** The API exposes `audio.import`, `session.info` and `session.save`; there is no native `.mid` import and no `session.open`. Write notes with `clips.write_midi` or the theory/clip generators.
+- **Audio import rounds native lengths.** The imported clip length is rounded (observed: a 32 beat loop became 32.25 beats). Place audio clips with explicit native-length placements.
+- **Lengthening an audio timeline clip did not repeat its content** in observed use. The catalog documents repetition for MIDI tracks only; for audio, place the clip once per repetition with explicit native-length placements.
+- **Exports can be structurally valid but silent.** If the arrangement playback mode is wrong, an offline render can contain only dither. `agent_verify_wav` rejects audio whose peak is below `silence_floor_dbfs` (default -80 dBFS). This is a floor check: it does not prove the audio is continuous, complete or musical.
+- **Plans are process-local.** Previews live in memory inside the server process, expire after 300 s, hold at most 128 steps, and the oldest of 32 pending plans is dropped. Split large timelines into several `agent_arrange_timeline` batches and apply each one promptly.
 
-**What the evidence supports**:
-- It reproduced in isolated runs against a null audio sink (no headset, no sound card). Hardware is therefore not required to trigger it.
-- It happens during plain arrangement playback. `analysis.capture` is not required to trigger it. An earlier version of this README claimed a threshold of about 75 s of accumulated captures; later controlled runs contradicted that.
-- Time to failure varied (23 s to 106 s in failing runs), and some runs of 90-224 s were clean. There is no deterministic trigger.
+### Audio-stream failure on Linux (regression note, October 2026)
 
-**What is not established**:
-- The cause. The OMNi binary embeds two copies of CPAL's ALSA backend (one identified as 0.15.3, one vendored and apparently from the 0.17 era). Which one drives the failing stream is unconfirmed. An upstream CPAL change (commit `5931fa29`, first released in v0.18.0) fixes a `POLLERR` spin loop that matches the symptoms, but its effect on OMNi has not been tested because it requires a rebuilt host.
-- How the host process dies in real sessions. The sandboxed runs showed the stream dying and the engine restarting, not the process exiting.
-- Behaviour on other operating systems.
+Earlier OMNi builds could lose their audio output stream during playback (log lines `alsa::poll() returned POLLERR`, then `Audio stream died - auto-restarting engine`). After that, audio stayed silent, including offline renders, and in some sessions the host process exited. The cause was never established, and no deterministic trigger was found. An earlier claim that about 75 s of accumulated `analysis.capture` calls triggers it was contradicted by later runs and has been removed.
 
-**Practical guidance for MCP clients** (none of this prevents the failure):
-1. Always verify exported audio with `agent_verify_wav` or equivalent. After a stream death, an offline render can be silent.
+With OMNi build `bbf1bd36`, whose developer reports related fixes, no new stream failures were seen in a ~30 minute session of mostly offline editing and exports, in a later session with ordinary 2 s `agent_measure` captures, or in a short playback test. This server applies no capture throttling. This is an observed improvement, not a certified fix: no long continuous playback test has been run, and behaviour on other operating systems is untested.
+
+Practical guidance for MCP clients:
+1. Verify exported audio with `agent_verify_wav` or equivalent.
 2. Save the project often. If the host dies, do not restart it automatically; report the failure and the evidence.
-3. Prefer offline export over real-time capture for evaluation. `engine.capture_with_cooldown()` (5 s pause between captures, batch limit of 8) is kept, but it was designed on a hypothesis that later evidence weakened, and its effect is not demonstrated.
+3. Prefer offline export over long real-time capture for evaluation.
 
 ## Verification & Testing
 

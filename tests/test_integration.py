@@ -605,6 +605,14 @@ async def test_export_preview_explicit_range_forwarded_verbatim(export_engine, k
     assert last["params"]["start_beat"] == 4 and last["params"]["end_beat"] == 512.5
 
 
+def test_version_locations_agree():
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    declared = re.search(r'^version = "([^"]+)"', (root / "pyproject.toml").read_text(), re.M).group(1)
+    assert f'"version": "{declared}"' in (root / "src/omnidaw_agent/client.py").read_text()
+
+
 def test_export_preview_public_schema_requires_end_beat():
     from omnidaw_agent.server import TOOLS
     spec = TOOLS["agent_export_preview"][1]

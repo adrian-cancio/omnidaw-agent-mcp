@@ -165,7 +165,7 @@ class Client:
         phase = "api.hello"
         try:
             hello = await self._rpc("api.hello", {"token": token, "api_version": VERSION,
-                                    "client": {"name": "omnidaw-agent-mcp", "version": "0.2.0"}})
+                                    "client": {"name": "omnidaw-agent-mcp", "version": "0.2.1"}})
             if not isinstance(hello, dict):
                 raise ValueError()
             if hello.get("protocol") != "omnidaw-api" or not compatible(hello.get("api_version")):
