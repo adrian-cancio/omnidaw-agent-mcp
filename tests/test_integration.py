@@ -165,6 +165,33 @@ async def test_jobs(host, job):
     await client.close()
 
 
+async def test_phase5_public_tools(host, tmp_path):
+    path, calls, state = host
+    catalog = Engine(Client(path)).catalog
+    state['methods'] = [m for m in catalog['methods'] if m['name'] in {'clips.write_midi', 'arrangement.place_clip', 'session.save', 'markers.add'}]
+    params = StdioServerParameters(command=sys.executable, args=['-m', 'omnidaw_agent.server', '--endpoint', str(path), '--allow-write', '--allow-risk', '--output-root', str(tmp_path)])
+    # One note: 240 ticks at PPQ 480 => independently expected half beat.
+    import struct
+    events = b'\x00\x90\x3c\x64\x81\x70\x80\x3c\x00\x00\xff\x2f\x00'
+    source = tmp_path / 'synthetic.mid'
+    source.write_bytes(b'MThd' + struct.pack('>IHHH', 6, 0, 1, 480) + b'MTrk' + struct.pack('>I', len(events)) + events)
+    async with MCPClient(params) as client:
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+        assert {'agent_midi_preview', 'agent_repeat_preview'} <= tools.keys()
+        for name, args in [('agent_midi_preview', {'path': str(source), 'track': 0, 'slot': 0}),
+                           ('agent_repeat_preview', {'track': 0, 'slot': 0, 'native_length_beats': 0.5, 'count': 3})]:
+            response = await client.call_tool(name, args)
+            assert not response.is_error
+            result = json.loads(response.content[0].text)
+            if name == 'agent_midi_preview':
+                assert result['changes'][0]['params']['notes'] == [{'pitch': 60, 'velocity': 100, 'start': 0, 'duration': 0.5}]
+            applied = await client.call_tool('agent_apply', {'plan_id': result['plan_id']})
+            assert json.loads(applied.content[0].text)['state'] == 'done', applied.content[0].text
+        assert (await client.call_tool('agent_repeat_preview', {'count': 2})).is_error
+    assert calls.count('clips.write_midi') == 1
+    assert calls.count('arrangement.place_clip') == 3
+
+
 async def test_actual_sdk_subprocess(host):
     path, _, _ = host
     params = StdioServerParameters(command=sys.executable, args=["-m", "omnidaw_agent.server", "--endpoint", str(path), "--domains", "session"])
@@ -181,7 +208,7 @@ async def test_offline_sdk(tmp_path):
     params = StdioServerParameters(command=sys.executable, args=["-m", "omnidaw_agent.server", "--endpoint", str(tmp_path/"absent")])
     async with MCPClient(params) as client:
         # 102 native tools from real bundled catalog + 11 agent_* composite workflows = 113 tools
-        assert len((await client.list_tools()).tools) == 113
+        assert len((await client.list_tools()).tools) == 115
         result = await client.call_tool("agent_status", {})
         assert "NOT verified" in result.content[0].text
 

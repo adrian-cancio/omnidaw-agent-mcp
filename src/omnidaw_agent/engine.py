@@ -188,6 +188,18 @@ class Engine:
                 if not has_ref(step.get("params", {})):
                     self.check(step["method"], step.get("params", {}))
             results, journal = {}, []
+            progress_warnings = []
+
+            async def notify(done, total):
+                if progress:
+                    try:
+                        await progress(done, total)
+                    except Exception:
+                        # Notifications are not mutation outcomes. Never retry a write
+                        # or interrupt job supervision because a notification failed.
+                        progress_warnings.append({"done": done, "total": total,
+                                                  "warning": "Progress notification failed"})
+
             for index, step in enumerate(plan["steps"]):
                 entry = {"index": index, "method": step["method"], "state": "started"}
                 journal.append(entry)
@@ -195,16 +207,19 @@ class Engine:
                     params = resolve(step.get("params", {}), results)
                     value = await self.call(step["method"], params)
                     if step.get("wait") and isinstance(value, dict) and "job" in value:
-                        value = await self.wait(value["job"], progress=progress)
+                        value = await self.wait(value["job"], progress=notify)
                     results[step.get("as", str(index))] = value
                     entry.update(state="done", result=value)
-                    if progress:
-                        await progress(index+1, len(plan["steps"]))
                 except Exception as error:
                     entry.update(state="failed_or_unknown", error=str(error))
                     return {"state": "partial_failure", "journal": journal,
+                            "completed": list(range(index)), "failed_or_unknown": [index],
+                            "pending": list(range(index + 1, len(plan["steps"]))),
+                            "scope": copy.deepcopy(plan["steps"]),
+                            "progress_warnings": progress_warnings,
                             "recovery": "Inspect live state before resuming. No automatic rollback or replay; undo cannot undo file writes."}
-            return {"state": "done", "journal": journal}
+                await notify(index + 1, len(plan["steps"]))
+            return {"state": "done", "journal": journal, "progress_warnings": progress_warnings}
 
 
 def has_ref(value):

@@ -131,12 +131,64 @@ async def export_preview(engine, path=None, folder=None, start_beat=0, end_beat=
                                 "Render WAV/stems; wait for job; verify files separately with agent_verify_wav")
 
 
-async def arrange_timeline(engine, placements, markers=None):
+async def arrange_timeline(engine, placements, markers=None, checkpoint_paths=None):
     steps = []
     for placement in placements:
+        for key in ("start_beat", "length_beats"):
+            if key in placement:
+                value = placement[key]
+                if (type(value) not in (int, float) or not math.isfinite(value)
+                        or value < 0 or (key == "length_beats" and value <= 0)):
+                    raise OmniError(f"{key} must be finite and within positive timeline bounds")
         params = {k: v for k, v in placement.items() if k in {"track", "slot", "start_beat", "length_beats"}}
         steps.append(step("arrangement.place_clip", params))
     for marker in markers or []:
+        for key in ("beat", "end_beat"):
+            if key in marker and (type(marker[key]) not in (int, float)
+                                  or not math.isfinite(marker[key]) or marker[key] < 0):
+                raise OmniError(f"Marker {key} must be finite and nonnegative")
         params = {k: v for k, v in marker.items() if k in {"beat", "name", "color", "end_beat"}}
         steps.append(step("markers.add", params))
-    return await engine.preview(steps, "Batch timeline clip placements and markers")
+    if not steps:
+        raise OmniError("At least one placement or marker is required")
+    batches = [steps[i:i + 32] for i in range(0, len(steps), 32)]
+    if checkpoint_paths is not None:
+        if len(checkpoint_paths) != len(batches) - 1:
+            raise OmniError("Provide exactly one checkpoint path between batches")
+        from pathlib import Path
+
+        if len({Path(path).resolve() for path in checkpoint_paths}) != len(checkpoint_paths):
+            raise OmniError("Checkpoint paths must be distinct")
+        combined = []
+        for index, batch in enumerate(batches):
+            combined.extend(batch)
+            if index < len(batches) - 1:
+                if Path(checkpoint_paths[index]).suffix != ".omni":
+                    raise OmniError("Checkpoint destination must have .omni extension")
+                params = {"path": checkpoint_paths[index]}
+                engine.check_files("session.save", params)
+                combined.append(step("session.save", params))
+        steps = combined
+    elif len(batches) > 1:
+        raise OmniError("Multiple batches require explicit checkpoint_paths between batches")
+    result = await engine.preview(steps, "Timeline batches of at most 32 mutations; checkpoints between batches")
+    result["batches"] = [len(batch) for batch in batches]
+    return result
+
+
+async def repeat_preview(engine, track, slot, native_length_beats, count, start_beat=0,
+                         markers=None, checkpoint_paths=None):
+    # Native length is operator-supplied, not guessed from undocumented host fields.
+    from fractions import Fraction
+
+    if type(count) is not int or not 1 <= count <= 128:
+        raise OmniError("count must be an integer in 1..128")
+    for name, value in (("native_length_beats", native_length_beats), ("start_beat", start_beat)):
+        if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+            raise OmniError(f"{name} must be finite and nonnegative")
+    if native_length_beats <= 0:
+        raise OmniError("native_length_beats must be positive")
+    start, length = Fraction(str(start_beat)), Fraction(str(native_length_beats))
+    placements = [{"track": track, "slot": slot, "start_beat": float(start + i * length),
+                   "length_beats": float(length)} for i in range(count)]
+    return await arrange_timeline(engine, placements, markers, checkpoint_paths)

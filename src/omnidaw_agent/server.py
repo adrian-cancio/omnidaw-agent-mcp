@@ -14,12 +14,14 @@ from mcp.server.stdio import stdio_server
 from .audio import verify_wav
 from .client import Client, OmniError
 from .engine import Engine
+from .midi import midi_preview
 from .workflows import (
     arrange_preview,
     arrange_timeline,
     export_preview,
     loop_preview,
     measure,
+    repeat_preview,
 )
 
 
@@ -36,7 +38,9 @@ TOOLS = {
     "agent_apply": ("Apply a previously returned preview once, subject to operator startup policy", schema({"plan_id": STRING}, ["plan_id"])),
     "agent_loop_preview": ("Preview deterministic native four-part electronic loop using live instruments", schema({"seed": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807}, "bpm": {"type": "number", "minimum": 40, "maximum": 240}})),
     "agent_arrange_preview": ("Preview sections, duplication/transforms, automation and save", schema({"sections": {"type": "array"}, "transforms": {"type": "array"}, "automation": {"type": "array"}, "save_path": STRING}, ["sections"])),
-    "agent_arrange_timeline": ("Preview batch timeline clip placements and optional markers", schema({"placements": {"type": "array", "items": {"type": "object", "properties": {"track": {"oneOf": [STRING, {"type": "integer"}]}, "slot": {"type": "integer", "minimum": 0, "maximum": 255}, "start_beat": NUMBER, "length_beats": NUMBER}, "required": ["track", "slot", "start_beat"]}}, "markers": {"type": "array", "items": {"type": "object", "properties": {"beat": NUMBER, "name": STRING, "color": STRING, "end_beat": NUMBER}, "required": ["beat", "name"]}}}, ["placements"])),
+    "agent_arrange_timeline": ("Preview batches of at most 32 timeline mutations with inter-batch checkpoints", schema({"checkpoint_paths": {"type": "array", "items": STRING}, "placements": {"type": "array", "items": {"type": "object", "properties": {"track": {"oneOf": [STRING, {"type": "integer"}]}, "slot": {"type": "integer", "minimum": 0, "maximum": 255}, "start_beat": NUMBER, "length_beats": NUMBER}, "required": ["track", "slot", "start_beat"]}}, "markers": {"type": "array", "items": {"type": "object", "properties": {"beat": NUMBER, "name": STRING, "color": STRING, "end_beat": NUMBER}, "required": ["beat", "name"]}}}, ["placements"])),
+    "agent_repeat_preview": ("Preview consecutive placements using explicit native clip length in beats", schema({"track": {"oneOf": [STRING, {"type": "integer", "minimum": 0}]}, "slot": {"type": "integer", "minimum": 0, "maximum": 255}, "native_length_beats": NUMBER, "count": {"type": "integer", "minimum": 1, "maximum": 128}, "start_beat": NUMBER, "markers": {"type": "array", "items": {"type": "object"}}, "checkpoint_paths": {"type": "array", "items": STRING}}, ["track", "slot", "native_length_beats", "count"])),
+    "agent_midi_preview": ("Parse bounded local SMF/RMID under output-root and preview MIDI notes; metadata is reported, never applied", schema({"path": STRING, "track": {"oneOf": [STRING, {"type": "integer", "minimum": 0}]}, "slot": {"type": "integer", "minimum": 0, "maximum": 255}}, ["path", "track", "slot"])),
     "agent_measure": ("Measure master or track, propose mastering chain, no perceptual claims", schema({"target": STRING, "seconds": {"type": "number", "minimum": 1, "maximum": 30}, "source": {"oneOf": [STRING, {"type": "object"}]}})),
     "agent_export_preview": ("Preview render/stems over an explicit beat range with bounded job waiting; no guarantee of audible content", schema({"path": STRING, "folder": STRING, "start_beat": {"type": "number", "minimum": 0, "maximum": 1000000}, "end_beat": {"type": "number", "minimum": 0, "maximum": 1000000}}, ["end_beat"])),
     "agent_wait": ("Bounded job waiting with progress, no restart on timeout", schema({"job": {"type": "integer", "minimum": 1}, "deadline": {"type": "number", "exclusiveMinimum": 0, "maximum": 600}}, ["job"])),
@@ -66,8 +70,10 @@ async def serve(engine):
 
     async def calling(ctx, params):
         async def progress(done, total):
-            if ctx.meta and ctx.meta.progress_token is not None:
-                await ctx.session.send_progress_notification(ctx.meta.progress_token, done, total)
+            token = (ctx.meta.get("progressToken") if isinstance(ctx.meta, dict)
+                     else getattr(ctx.meta, "progress_token", None))
+            if token is not None:
+                await ctx.session.send_progress_notification(token, done, total)
         try:
             args = params.arguments or {}
             name = params.name
@@ -104,6 +110,10 @@ async def serve(engine):
                     result = await arrange_preview(engine, **args)
                 elif name == "agent_arrange_timeline":
                     result = await arrange_timeline(engine, **args)
+                elif name == "agent_repeat_preview":
+                    result = await repeat_preview(engine, **args)
+                elif name == "agent_midi_preview":
+                    result = await midi_preview(engine, **args)
                 elif name == "agent_measure":
                     result = await measure(engine, **args)
                 elif name == "agent_export_preview":
