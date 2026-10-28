@@ -127,7 +127,7 @@ pip install 'omnidaw-agent-mcp[diagnostics]'
 For development:
 
 ```bash
-git clone https://github.com/stratovey/omnidaw-agent-mcp.git
+git clone https://github.com/adrian-cancio/omnidaw-agent-mcp.git
 cd omnidaw-agent-mcp
 
 python3 -m venv .venv
