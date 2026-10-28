@@ -11,14 +11,91 @@ While OMNi DAW includes an official MCP server, `omnidaw-agent-mcp` is an indepe
 - **Job & File Safety**: Safe async job supervision with deadlines, strict loopback TCP restrictions, automatic token redaction from errors and logs, and verification of non-silent PCM audio.
 - **Honest Offline Status**: Accurate reporting of whether API capabilities originate from live discovery or bundled references.
 
-## Phase 5a-1 offline workflows
+## Clip placement, checkpoints, and MIDI import
 
-- **M-006:** bundled official 0.21.0 `params_list` supports a required `track`, not a master chain. No fabricated `chain` argument is added. `devices_list({"chain":"master"})` and `devices_get({"chain":"master","slot":0})` already support master effects; this is not equivalent to paginated plugin parameter discovery.
-- **M-004:** `agent_repeat_preview` takes `track`, `slot`, `native_length_beats`, `count`, and optional `start_beat`. Supply the actual native length in quarter-note beats; it is not inferred from undocumented engine fields or audio duration/tempo. Each placement has explicit start and length, computed from the original decimal values rather than accumulated float addition. Fractional lengths are supported within official placement bounds (0.25..4096 beats). This places existing session clips without clearing the track. Audio placement is described by `audio.import` in the bundled reference, but its interaction with the MIDI-only wording of `arrangement.place_clip` remains a live validation item for 5a-2.
-- **M-005:** `agent_arrange_timeline` and repetitions group placements plus markers in ordered batches of at most 32 mutations. Markers follow placements and count toward the bound. More than one batch requires `checkpoint_paths`: exactly one distinct, new absolute `.omni` destination between adjacent batches, inside `--output-root`. Saves use the official `session.save` API and change the project's save destination. A missing/domain-filtered save method blocks preview. Saves count toward the unchanged 128-step plan limit. Single-batch existing calls remain compatible. Preview/apply retains process-local 300-second expiry and single-use plans. Partial failures return completed indices, failed-or-unknown index, pending indices and the full step scope; writes stop immediately. No rollback, automatic retry or replay is provided, including unknown mutation/checkpoint outcomes. Apply progress notifications are best-effort: callback exceptions are recorded as `progress_warnings`, never relabel confirmed writes, interrupt job supervision, or trigger replay. Checkpoint preview enforces the `.omni` suffix; existing destinations are refused even with overwrite authorization because checkpoints never request overwrite. Apply rechecks destination availability before any plan writes (and again at each save).
-- **M-007:** `agent_midi_preview({"path":"/authorized/synthetic.mid","track":0,"slot":0})` reads a bounded local SMF or RIFF RMID under the existing `--output-root` policy (also used for this local input). Absolute paths only; resolved symlink escapes are denied before reading. It previews a replacement `clips.write_midi`; applying still needs write and risk authorization. Formats 0/1 and PPQ are supported, with FIFO overlap pairing per source track/channel; tracks/channels merge into one destination with an explicit warning. Note times are ticks / PPQ, independent of tempo. Tempo, controller, program and meta payloads are preserved in the report, not applied; sustain/instrument behavior may differ. Format 2, SMPTE, SysEx/system, pressure/pitch bend, malformed structures and unrepresentable note timing are refused before plan creation. Limits: 8 MiB, 100,000 events, 256 tracks, 4,096 notes, 1,024 clip beats. Empty note files are rejected.
+- **Master effect inspection:** bundled official 0.21.0 `params_list` supports a required `track`, not a master chain. No fabricated `chain` argument is added. `devices_list({"chain":"master"})` and `devices_get({"chain":"master","slot":0})` already support master effects; this is not equivalent to paginated plugin parameter discovery.
+- **Repeated clip placement:** `agent_repeat_preview` takes `track`, `slot`, `native_length_beats`, `count`, and optional `start_beat`. Supply the actual native length in quarter-note beats; it is not inferred from undocumented engine fields or audio duration/tempo. Each placement has explicit start and length, computed from the original decimal values rather than accumulated float addition. Fractional lengths are supported within official placement bounds (0.25..4096 beats). This places existing session clips without clearing the track. The bundled `arrangement.place_clip` description mentions MIDI only; bounded live verification also confirmed repeated audio placement with explicit lengths (see verification scope below).
+- **Batched arrangements and checkpoints:** `agent_arrange_timeline` and repetitions group placements plus markers in ordered batches of at most 32 mutations. Markers follow placements and count toward the bound. More than one batch requires `checkpoint_paths`: exactly one distinct, new absolute `.omni` destination between adjacent batches, inside `--output-root`. Saves use the official `session.save` API and change the project's save destination. A missing/domain-filtered save method blocks preview. Saves count toward the unchanged 128-step plan limit. Single-batch existing calls remain compatible. Preview/apply retains process-local 300-second expiry and single-use plans. Partial failures return completed indices, failed-or-unknown index, pending indices and the full step scope; writes stop immediately. No rollback, automatic retry or replay is provided, including unknown mutation/checkpoint outcomes. Apply progress notifications are best-effort: callback exceptions are recorded as `progress_warnings`, never relabel confirmed writes, interrupt job supervision, or trigger replay. Checkpoint preview enforces the `.omni` suffix; existing destinations are refused even with overwrite authorization because checkpoints never request overwrite. Apply rechecks destination availability before any plan writes (and again at each save).
+- **Local MIDI import:** `agent_midi_preview({"path":"/authorized/synthetic.mid","track":0,"slot":0})` reads a bounded local SMF or RIFF RMID under the existing `--output-root` policy (also used for this local input). Absolute paths only; resolved symlink escapes are denied before reading. It previews a replacement `clips.write_midi`; applying still needs write and risk authorization. Formats 0/1 and PPQ are supported, with FIFO overlap pairing per source track/channel; tracks/channels merge into one destination with an explicit warning. Note times are ticks / PPQ, independent of tempo. Tempo, controller, program and meta payloads are preserved in the report, not applied; sustain/instrument behavior may differ. Format 2, SMPTE, SysEx/system, pressure/pitch bend, malformed structures and unrepresentable note timing are refused before plan creation. Limits: 8 MiB, 100,000 events, 256 tracks, 4,096 notes, 1,024 clip beats. Empty note files are rejected.
 
-Verification is offline only: synthetic MIDI fixtures, official bundled schemas, fake engine and actual SDK stdio against a fake loopback host. No live OMNi behavior, audible results, or actual checkpoint persistence is established. Live validation is explicitly deferred; offline passing tests do not establish those properties.
+Live verification scope (2026-10-28, Linux, API 0.21.0, app 0.1.0) exercised the actual SDK stdio bridge with generated local fixtures. Four explicit two-beat audio placements rendered eight correctly timed pulse windows with continuous low-level beds. A 33-placement plan saved a checkpoint after 32 new placements; project JSON and live arrangement readback confirmed the content. Reopening remains unverified: no `session.open` method exists. SMF and RMID imports returned the expected notes and a native-instrument render was non-silent; format 2 was explicitly refused. These are bounded fixture tests, not subjective listening or long-session reliability certification.
+
+Live discovery also confirmed master builtin parameter inspection through `devices.get`, EQ per-band Mid/Side processing (a Side low-cut causally suppressed a synthetic 60 Hz side component while preserving 1 kHz), Saturator algorithms/oversampling/mix, Filter Notch mode, and sampler fine tune/pitch-envelope parameters through `params.list` / `params.set`. Parameter keys are instrument-specific: discover them on the actual target track, never transfer numeric keys between instruments. General parameter automation with `smooth` curves was accepted and read back; exponential interpolation and audible automation behavior remain unverified. External compressor routing, track polarity inversion, per-band correlation/vectorscope and group-output routing were not established; absence of a catalog field is not proof of GUI absence.
+
+## Optional sample search and audio diagnostics
+
+The base server needs neither component. Optional integrations can be installed via package extras (`[search]`, `[diagnostics]`, `[all]`). When installed, users only configure paths to their data, never to source checkouts:
+
+```bash
+# Enable sample search with data paths; diagnostics are discovered automatically when installed
+omnidaw-agent --allow-write --output-root /authorized/new-project \
+  --sample-index-db /authorized/index.sqlite --library-root /authorized/library
+```
+
+Optional tools are listed only when their components and required data paths exist; `agent_status.optional_integrations` reports availability and source (`package` or `repo`). Runtime dependency/DB health is checked on each call. No indexing, migrations, component installs, global reloads or audio uploads occur. No reinstall is needed between calls. Paths shown are examples, not defaults:
+
+- **`agent_resource_search`**: call with
+  `{"filters":{"ext":"wav","bpm_min":140,"bpm_provenance":"est"},"limit":5}`.
+  The tool schema lists supported filters, which mirror `reports.query`; unknown
+  filters, numeric strings, nonfinite/inverted bounds and unsupported provenance
+  are rejected. Limit is 1–50 over MCP. Known corruption is excluded by default;
+  `include_errors`/`only_errors` explicitly opt in. Missing paths are never included.
+  A bounded isolated subprocess calls the component library over SQLite URI
+  `mode=ro` plus `query_only`. The component CLI is deliberately **not** used:
+  its connection enables writable WAL even for query. Mixed-root indexes fail
+  closed. Resolved current paths must be files inside the configured library.
+  Indexed SHA/measurements/descriptors and uncertainty are retained; current
+  contents are not rehashed and metadata freshness is not certified.
+- **`agent_export_and_diagnose_preview`**, then `agent_apply`:
+  `{"path":"/authorized/new-project/mix.wav","save_path":"/authorized/new-project/checkpoint.omni","start_beat":0,"end_beat":8,"bpm":120,"intents":["Intentional breakdown"]}`.
+  Inspect the returned changes before apply. Requires a new `.omni` checkpoint,
+  explicit finite beat range, normal write/risk policy and root containment.
+  Timeline preparation uses the existing export workflow; checkpoint follows
+  preparation and precedes render. Save changes the project's save destination.
+  Only a confirmed completed render job proceeds to actual integer-PCM/non-silence
+  verification and the local analyzer. Analysis uses argv without a shell; the analyzer subprocess has a 90 s deadline
+  and a 2 MiB limit per output stream. Local path resolution, PCM verification,
+  hashing and schema validation are outside that subprocess deadline: this is
+  **not** a 90 s end-to-end guarantee. Only regular files are accepted; POSIX
+  nonblocking open and descriptor checks reject FIFO replacement races. Filesystem
+  stalls on regular files remain possible, and the authorized root must be under
+  operator control (hostile ancestor-directory replacement is not sandboxed).
+  Configured Python invocation paths preserve virtual-environment symlinks. JSON is checked against the configured component's
+  report schema, supported analyzer version `0.1.0`, path and before/after SHA.
+  No diagnostic report files are written under Music (or elsewhere): results are
+  returned through MCP JSON. Level-2 heuristics are never automatic defects.
+- **`agent_diagnose_wav`** is read-only recovery/offline checking for an existing
+  WAV inside output-root: `{"path":"/authorized/new-project/mix.wav","bpm":120}`.
+  It verifies PCM and invokes only the analyzer, never exports or saves. It does
+  not establish that an arbitrary existing file came from a particular host job.
+
+Failure states retain the apply journal: `export_failed_or_unknown` stops before
+analysis, `export_outcome_unknown` rejects missing/malformed completed-job evidence,
+`wav_rejected` preserves a completed export but refuses analysis, and
+`analysis_failed` preserves artifact/job/SHA without replaying export. Inspect live
+jobs after uncertain outcomes. Retry diagnostics on the existing file only, never
+retry an unknown export automatically. Missing config/component/DB, corrupt or
+incompatible DB, root escapes, deadlines and malformed/oversized output fail
+explicitly. Component code is trusted operator configuration, not a sandbox.
+
+Verification on 2026-10-28: actual MCP stdio search returned real indexed files;
+actual MCP offline diagnostics analyzed a generated WAV with matching unchanged
+SHA. The combined host export-and-diagnose workflow was also exercised through
+actual MCP on an authorized disposable synthetic project: a new checkpoint,
+bounded four-beat render, completed job, PCM verification and analyzer SHA check
+passed. These bounded checks do not establish subjective musical quality,
+long-session reliability or behavior on other platforms.
+
+### Advanced / Development source checkouts
+
+When developing against local source checkouts instead of installed packages, pass `--sample-indexer-repo` and/or `--audio-diag-repo` (with optional `--sample-indexer-python` and `--audio-diag-python` overrides):
+
+```bash
+omnidaw-agent --allow-write --output-root /authorized/new-project \
+  --sample-indexer-repo /path/to/sample-indexer-checkout \
+  --sample-index-db /authorized/index.sqlite --library-root /authorized/library \
+  --audio-diag-repo /path/to/audio-diag-checkout
+```
 
 ## Platform Compatibility & Requirements
 
@@ -33,13 +110,29 @@ Supported Platforms:
 
 ## Installation
 
+Standard installation with pip:
+
+```bash
+# Base server
+pip install omnidaw-agent-mcp
+
+# With all optional integrations (sample search + audio diagnostics)
+pip install 'omnidaw-agent-mcp[all]'
+
+# Or with individual extras:
+pip install 'omnidaw-agent-mcp[search]'
+pip install 'omnidaw-agent-mcp[diagnostics]'
+```
+
+For development:
+
 ```bash
 git clone https://github.com/stratovey/omnidaw-agent-mcp.git
 cd omnidaw-agent-mcp
 
 python3 -m venv .venv
 source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-pip install -e .
+pip install -e '.[all,dev]'
 ```
 
 To run diagnostics:
@@ -111,7 +204,7 @@ For agents operating remotely (e.g. on a separate VPS):
 
 These are limits of the current OMNi API and of this server's safety model, not guarantees about audible results.
 
-- **No MIDI file import or session open.** The API exposes `audio.import`, `session.info` and `session.save`; there is no native `.mid` import and no `session.open`. Write notes with `clips.write_midi` or the theory/clip generators.
+- **No native MIDI file import or session open.** The host API exposes `audio.import`, `session.info` and `session.save`, but no native `.mid` import or `session.open`. This server's `agent_midi_preview` parses supported local MIDI files and previews a replacement `clips.write_midi` operation; it does not preserve all MIDI playback behavior (see formats and limits above). Notes can also be written with `clips.write_midi` or the theory/clip generators.
 - **Audio import rounds native lengths.** The imported clip length is rounded (observed: a 32 beat loop became 32.25 beats). Place audio clips with explicit native-length placements.
 - **Lengthening an audio timeline clip did not repeat its content** in observed use. The catalog documents repetition for MIDI tracks only; for audio, place the clip once per repetition with explicit native-length placements.
 - **Exports can be structurally valid but silent.** If the arrangement playback mode is wrong, an offline render can contain only dither. `agent_verify_wav` rejects audio whose peak is below `silence_floor_dbfs` (default -80 dBFS). This is a floor check: it does not prove the audio is continuous, complete or musical.

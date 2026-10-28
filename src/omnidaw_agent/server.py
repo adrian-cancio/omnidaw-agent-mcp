@@ -13,6 +13,7 @@ from mcp.server.stdio import stdio_server
 
 from .audio import verify_wav
 from .client import Client, OmniError
+from .diagnostics import AudioDiag, diagnose_preview, export_and_diagnose
 from .engine import Engine
 from .midi import midi_preview
 from .workflows import (
@@ -55,7 +56,23 @@ def tool_of(method):
         idempotent_hint=method["idempotent"], open_world_hint=False))
 
 
-async def serve(engine):
+def available_tools(audio_diag=None, resource_search=None):
+    audio_diag = audio_diag or AudioDiag()
+    optional = {
+        "agent_export_and_diagnose_preview": ("M-003: preview checkpoint, explicit-range render and optional local diagnostics", schema({"path": STRING, "save_path": STRING, "start_beat": {"type": "number", "minimum": 0}, "end_beat": {"type": "number", "minimum": 0}, "bpm": {"type": "number", "minimum": 40, "maximum": 300}, "intents": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 1000}}}, ["path", "save_path", "start_beat", "end_beat"]))
+    }
+    result = dict(TOOLS)
+    if audio_diag.status()["available"]:
+        result.update(optional)
+        result["agent_diagnose_wav"] = ("Read-only diagnostic recovery for an existing verified WAV under output-root; never exports", schema({"path": STRING, "bpm": {"type": "number", "minimum": 40, "maximum": 300}, "intents": {"type": "array", "maxItems": 32, "items": {"type": "string", "maxLength": 1000}}}, ["path"]))
+    if resource_search is not None and resource_search.status()["available"]:
+        from .resource_search import FILTER_SCHEMA
+        result["agent_resource_search"] = ("M-001: read-only indexed resource search; metadata is untrusted", schema({"filters": FILTER_SCHEMA, "limit": {"type": "integer", "minimum": 1, "maximum": 50}}, ["filters"]))
+    return result
+
+
+async def serve(engine, audio_diag=None, resource_search=None):
+    audio_diag = audio_diag or AudioDiag()
     async def listing(ctx, params):
         try:
             await engine.refresh()
@@ -65,7 +82,7 @@ async def serve(engine):
         tools.extend(types.Tool(name=name, description=desc, input_schema=spec,
                      annotations=types.ToolAnnotations(read_only_hint=name not in {"agent_apply", "agent_measure"},
                          destructive_hint=name == "agent_apply", open_world_hint=False))
-                     for name, (desc, spec) in TOOLS.items())
+                     for name, (desc, spec) in available_tools(audio_diag, resource_search).items())
         return types.ListToolsResult(tools=tools)
 
     async def calling(ctx, params):
@@ -77,8 +94,9 @@ async def serve(engine):
         try:
             args = params.arguments or {}
             name = params.name
-            if name in TOOLS:
-                if list(Draft202012Validator(TOOLS[name][1]).iter_errors(args)):
+            registered = available_tools(audio_diag, resource_search)
+            if name in registered:
+                if list(Draft202012Validator(registered[name][1]).iter_errors(args)):
                     raise OmniError("Invalid workflow arguments")
                 if name == "agent_status":
                     try:
@@ -94,7 +112,8 @@ async def serve(engine):
                         "catalog_methods": len(engine.methods()), "capabilities": engine.client.capabilities,
                         "file_permissions": engine.file_permissions,
                         "file_permission_status": engine.file_permissions,
-                        "policy": {"allow_write": engine.allow_write, "allow_risk": engine.allow_risk,
+                        "optional_integrations": {"audio_diag": audio_diag.status(), "resource_search": resource_search.status() if resource_search else {"available": False, "reason": "not configured"}},
+                         "policy": {"allow_write": engine.allow_write, "allow_risk": engine.allow_risk,
                                    "allow_overwrite": engine.allow_overwrite,
                                    "domains": sorted(engine.domains) if engine.domains else "all",
                                    "output_root": str(engine.output_root)}}
@@ -103,7 +122,19 @@ async def serve(engine):
                 elif name == "agent_preview":
                     result = await engine.preview(**args)
                 elif name == "agent_apply":
-                    result = await engine.apply(**args, progress=progress)
+                    plan = engine.plans.get(args["plan_id"], {})
+                    if "diagnostic" in plan:
+                        result = await export_and_diagnose(engine, audio_diag, **args, progress=progress)
+                    else:
+                        result = await engine.apply(**args, progress=progress)
+                elif name == "agent_export_and_diagnose_preview":
+                    result = await diagnose_preview(engine, audio_diag, **args)
+                elif name == "agent_diagnose_wav":
+                    wav = await asyncio.to_thread(verify_wav, path=args["path"], root=engine.output_root)
+                    result = await audio_diag.analyze(root=engine.output_root, **args)
+                    result["wav"] = wav
+                elif name == "agent_resource_search":
+                    result = await resource_search.search(**args)
                 elif name == "agent_loop_preview":
                     result = await loop_preview(engine, **args)
                 elif name == "agent_arrange_preview":
@@ -152,6 +183,12 @@ def main():
     parser.add_argument("--allow-risk", action="store_true", help="Operator authorizes replacement/destructive/history operations")
     parser.add_argument("--allow-overwrite", action="store_true", help="Operator authorizes overwriting existing files within output root")
     parser.add_argument("--output-root", help="Constrain new output files to this directory")
+    parser.add_argument("--audio-diag-repo", help="Optional local audio-diag source checkout (fallback/dev)")
+    parser.add_argument("--audio-diag-python", help="Python executable with audio-diag runtime dependencies (default: current python)")
+    parser.add_argument("--sample-indexer-repo", help="Optional local sample-indexer source checkout (fallback/dev)")
+    parser.add_argument("--sample-indexer-python", help="Python executable for optional search worker (default: current python)")
+    parser.add_argument("--sample-index-db", help="Existing stable SQLite index; opened read-only only")
+    parser.add_argument("--library-root", help="Authorized read-only sample library root")
     parser.add_argument("--diagnose", action="store_true")
     args = parser.parse_args()
     engine = Engine(Client(args.endpoint), domains=args.domains.split(",") if args.domains else None,
@@ -170,7 +207,10 @@ def main():
                 await engine.client.close()
         asyncio.run(diagnose())
     else:
-        asyncio.run(serve(engine))
+        from .resource_search import ResourceSearch
+        search = ResourceSearch(component_repo=args.sample_indexer_repo, python_executable=args.sample_indexer_python,
+                                database=args.sample_index_db, library_root=args.library_root)
+        asyncio.run(serve(engine, AudioDiag(args.audio_diag_repo, args.audio_diag_python), search))
 
 
 if __name__ == "__main__":

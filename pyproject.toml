@@ -12,6 +12,9 @@ license = "MIT"
 
 [project.optional-dependencies]
 dev = ["pytest>=9", "pytest-asyncio>=1", "ruff>=0.17", "build>=1"]
+search = ["sample-indexer>=0.1.0"]
+diagnostics = ["audio-diag>=0.1.0"]
+all = ["sample-indexer>=0.1.0", "audio-diag>=0.1.0"]
 
 [project.scripts]
 omnidaw-agent = "omnidaw_agent.server:main"

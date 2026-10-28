@@ -207,6 +207,8 @@ class Engine:
                     params = resolve(step.get("params", {}), results)
                     value = await self.call(step["method"], params)
                     if step.get("wait") and isinstance(value, dict) and "job" in value:
+                        # Retain the submitted job even if supervision fails or times out.
+                        entry["submitted_job"] = value["job"]
                         value = await self.wait(value["job"], progress=notify)
                     results[step.get("as", str(index))] = value
                     entry.update(state="done", result=value)

@@ -1,6 +1,9 @@
 """Validate actual integer PCM WAV, without fabricating or substituting audio."""
 import math
+import os
+import stat
 import wave
+from contextlib import contextmanager
 from pathlib import Path
 
 from .client import OmniError
@@ -12,6 +15,31 @@ def _dbfs(level):
     return 20*math.log10(level)
 
 
+@contextmanager
+def regular_reader(path):
+    """Reject special files before opening; fstat also rejects replacement races.
+
+    O_NONBLOCK prevents a FIFO swapped in after stat from blocking open on POSIX.
+    O_NOFOLLOW refuses a final-component symlink swapped in after resolution.
+    This is not a filesystem I/O deadline or a sandbox against hostile ancestor
+    directory replacement; the operator must control the authorized root.
+    """
+    target = Path(path)
+    if not stat.S_ISREG(target.stat().st_mode):
+        raise OmniError("Input must be a regular file")
+    flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    fd = os.open(target, flags)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise OmniError("Input must be a regular file")
+        with os.fdopen(fd, "rb") as source:
+            fd = None
+            yield source
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def verify_wav(path, root, expected_seconds=None, sample_rate=None, channels=2,
                silence_floor_dbfs=DEFAULT_SILENCE_FLOOR_DBFS):
     if (isinstance(silence_floor_dbfs, bool) or not isinstance(silence_floor_dbfs, (int, float))
@@ -21,7 +49,7 @@ def verify_wav(path, root, expected_seconds=None, sample_rate=None, channels=2,
     if root is None or not target.is_relative_to(Path(root).resolve()):
         raise OmniError("Verification restricted to operator output root")
     try:
-        with wave.open(str(target), "rb") as wav:
+        with regular_reader(target) as source, wave.open(source, "rb") as wav:
             rate, count, width, frames = (wav.getframerate(), wav.getnchannels(),
                                           wav.getsampwidth(), wav.getnframes())
             if width not in (2, 3, 4) or count != channels or not frames:
