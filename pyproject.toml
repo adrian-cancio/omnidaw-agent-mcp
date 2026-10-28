@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omnidaw-agent-mcp"
-version = "0.2.1"
+version = "0.3.0"
 description = "Unofficial policy-enforced local OMNi MCP integration"
 readme = "README.md"
 requires-python = ">=3.12"
